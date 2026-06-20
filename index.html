@@ -1,0 +1,2148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TopCasinos — Admin Panel</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #060d1a; color: #e0e8ff; min-height: 100vh; }
+
+  .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: radial-gradient(ellipse at 50% 40%, #0a1a3a 0%, #060d1a 70%); }
+  .login-card { background: #0d1b33; border: 1px solid #1a3a7c; border-radius: 18px; padding: 2.5rem 2rem; width: 100%; max-width: 380px; box-shadow: 0 0 60px rgba(26,58,124,0.4); }
+  .login-logo { text-align: center; margin-bottom: 2rem; }
+  .login-logo-icon { font-size: 36px; }
+  .login-logo-title { font-size: 22px; font-weight: 700; color: #fff; margin-top: 8px; }
+  .login-logo-sub { font-size: 11px; color: #4a6ab0; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+  .lfield { margin-bottom: 1.1rem; }
+  .lfield label { display: block; font-size: 12px; color: #4a6ab0; margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .lfield input { width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid #1a3a7c; background: #060d1a; font-size: 15px; color: #e0e8ff; outline: none; }
+  .lfield input:focus { border-color: #2255b8; }
+  .btn-login { width: 100%; padding: 13px; background: #1a3a7c; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 0.5rem; }
+  .btn-login:hover { background: #2255b8; }
+  .login-err { background: rgba(192,57,43,0.15); color: #e74c3c; border: 1px solid rgba(192,57,43,0.3); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 1rem; display: none; }
+
+  .panel { display: none; }
+  .panel.active { display: block; min-height: 100vh; }
+
+  .topbar { background: #0d1b33; border-bottom: 1px solid #1a3a7c; padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
+  .topbar-brand { font-size: 18px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
+  .admin-badge { background: #1a3a7c; color: #7eb3ff; border-radius: 6px; padding: 2px 10px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .balance-display { background: #060d1a; border: 1px solid #1a3a7c; border-radius: 8px; padding: 6px 16px; font-size: 13px; color: #7eb3ff; display: flex; align-items: center; gap: 6px; }
+  .balance-display strong { color: #4ade80; font-size: 15px; }
+  .btn-logout { background: transparent; border: 1px solid #1a3a7c; color: #4a6ab0; border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+  .btn-logout:hover { background: #1a3a7c; color: #fff; }
+
+  .main { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  .action-row { display: flex; gap: 14px; margin-bottom: 2rem; flex-wrap: wrap; }
+  .action-btn { display: flex; align-items: center; gap: 10px; padding: 14px 24px; border-radius: 12px; border: 1px solid #1a3a7c; background: #0d1b33; color: #e0e8ff; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 160px; }
+  .action-btn:hover { background: #1a3a7c; border-color: #2255b8; color: #fff; }
+  .action-btn .aicon { font-size: 22px; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 2rem; }
+  .stat-card { background: #0d1b33; border: 1px solid #1a3a7c; border-radius: 12px; padding: 1.25rem; }
+  .stat-card .sv { font-size: 22px; font-weight: 700; color: #fff; }
+  .stat-card .sl { font-size: 12px; color: #4a6ab0; margin-top: 4px; }
+
+  .agents-section { background: #0d1b33; border: 1px solid #1a3a7c; border-radius: 14px; padding: 1.5rem; }
+  .sec-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 11px; font-weight: 700; color: #4a6ab0; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 14px 10px; border-bottom: 1px solid #1a3a7c; }
+  td { padding: 13px 14px; border-bottom: 1px solid #0a1525; color: #c8d4f0; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #0a1525; }
+  .pill { border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 700; display: inline-block; }
+  .pill-blue { background: rgba(26,58,124,0.4); color: #7eb3ff; border: 1px solid #1a3a7c; }
+  .pill-green { background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
+  .no-data { text-align: center; padding: 2.5rem; color: #4a6ab0; font-size: 14px; }
+  .btn-sm { background: #1a3a7c; color: #7eb3ff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .btn-sm:hover { background: #2255b8; color: #fff; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(3,7,18,0.85); display: none; align-items: center; justify-content: center; z-index: 999; padding: 1rem; }
+  .overlay.open { display: flex; }
+  .modal { background: #0d1b33; border: 1px solid #1a3a7c; border-radius: 18px; padding: 2rem; width: 100%; max-width: 460px; position: relative; box-shadow: 0 0 60px rgba(26,58,124,0.5); max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 1.5rem; }
+  .mclose { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 22px; cursor: pointer; color: #4a6ab0; }
+  .mclose:hover { color: #fff; }
+  .mfield { margin-bottom: 1rem; }
+  .mfield label { display: block; font-size: 12px; color: #4a6ab0; margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .mfield input, .mfield select { width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid #1a3a7c; background: #060d1a; font-size: 15px; color: #e0e8ff; outline: none; }
+  .mfield input:focus, .mfield select:focus { border-color: #2255b8; }
+  .btn-submit { width: 100%; padding: 12px; background: #1a3a7c; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 0.25rem; }
+  .btn-submit:hover { background: #2255b8; }
+  .btn-cancel { width: 100%; padding: 12px; background: transparent; color: #e74c3c; border: 1px solid rgba(231,76,60,0.4); border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+  .btn-cancel:hover { background: rgba(231,76,60,0.1); }
+  .merr { background: rgba(192,57,43,0.15); color: #e74c3c; border: 1px solid rgba(192,57,43,0.3); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 1rem; display: none; }
+  .msuccess { background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); border-radius: 8px; padding: 12px 14px; font-size: 13px; margin-top: 0.75rem; display: none; }
+
+  .creds-box { background: #060d1a; border: 1px solid #1a3a7c; border-radius: 10px; padding: 1rem 1.25rem; margin-top: 1rem; display: none; }
+  .creds-title { font-size: 12px; color: #4ade80; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 700; }
+  .cred-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #0d1b33; font-size: 14px; }
+  .cred-row:last-child { border-bottom: none; }
+  .cred-label { color: #4a6ab0; font-size: 12px; }
+  .cred-val { color: #7eb3ff; font-weight: 700; font-size: 14px; }
+
+  .search-wrap { position: relative; }
+  .search-wrap input { width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid #1a3a7c; background: #060d1a; font-size: 15px; color: #e0e8ff; outline: none; }
+  .search-wrap input:focus { border-color: #2255b8; }
+  .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #0d1b33; border: 1px solid #1a3a7c; border-radius: 8px; margin-top: 4px; z-index: 10; max-height: 200px; overflow-y: auto; display: none; }
+  .search-dropdown.open { display: block; }
+  .sdrop-item { padding: 10px 14px; cursor: pointer; font-size: 14px; color: #c8d4f0; border-bottom: 1px solid #1a3a7c; }
+  .sdrop-item:last-child { border-bottom: none; }
+  .sdrop-item:hover { background: #1a3a7c; color: #fff; }
+  .sdrop-empty { padding: 12px 14px; color: #4a6ab0; font-size: 13px; }
+  .selected-agent { background: #060d1a; border: 1px solid #2255b8; border-radius: 8px; padding: 10px 14px; margin-top: 8px; display: none; }
+  .selected-agent .sa-id { font-size: 15px; font-weight: 700; color: #7eb3ff; }
+  .selected-agent .sa-name { font-size: 12px; color: #4a6ab0; margin-top: 2px; }
+  .selected-agent .sa-bal { font-size: 13px; color: #4ade80; margin-top: 4px; }
+
+  /* TRANSACTIONS */
+  .txn-filter { display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .txn-filter input { flex: 1; min-width: 160px; padding: 9px 14px; border-radius: 8px; border: 1px solid #1a3a7c; background: #060d1a; font-size: 14px; color: #e0e8ff; outline: none; }
+  .txn-filter input:focus { border-color: #2255b8; }
+  .txn-item { background: #060d1a; border: 1px solid #1a3a7c; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .txn-left { display: flex; flex-direction: column; gap: 4px; }
+  .txn-agent { font-size: 14px; font-weight: 700; color: #fff; }
+  .txn-agentid { font-size: 12px; color: #4a6ab0; }
+  .txn-time { font-size: 12px; color: #4a6ab0; }
+  .txn-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .txn-amount { font-size: 18px; font-weight: 700; color: #4ade80; }
+  .txn-type { font-size: 11px; color: #7eb3ff; background: rgba(26,58,124,0.4); border-radius: 20px; padding: 2px 10px; }
+  .txn-cancel-btn { background: rgba(231,76,60,0.15); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3); border-radius: 6px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .txn-cancel-btn:hover { background: rgba(231,76,60,0.25); }
+  .txn-cancelled { font-size: 11px; color: #e74c3c; background: rgba(231,76,60,0.1); border-radius: 20px; padding: 2px 10px; border: 1px solid rgba(231,76,60,0.3); }
+  .no-txn { text-align: center; padding: 2rem; color: #4a6ab0; font-size: 14px; }
+  .txn-summary { display: flex; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .txn-sum-card { background: #060d1a; border: 1px solid #1a3a7c; border-radius: 8px; padding: 10px 16px; flex: 1; min-width: 120px; }
+  .txn-sum-val { font-size: 16px; font-weight: 700; color: #4ade80; }
+  .txn-sum-lbl { font-size: 11px; color: #4a6ab0; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🔐</div>
+      <div class="login-logo-title">TopCasinos</div>
+      <div class="login-logo-sub">Admin Control Panel</div>
+    </div>
+    <div class="login-err" id="login-err"></div>
+    <div class="lfield"><label>Username</label><input type="text" id="l-user" placeholder="Enter admin username" /></div>
+    <div class="lfield"><label>Password</label><input type="password" id="l-pass" placeholder="Enter admin password" /></div>
+    <button class="btn-login" id="signin-btn" onclick="adminLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div class="panel" id="panel">
+  <div class="topbar">
+    <div class="topbar-brand">🎰 TopCasinos <span class="admin-badge">ADMIN</span></div>
+    <div class="topbar-right">
+      <div class="balance-display">Admin Balance: <strong>UNLIMITED</strong></div>
+      <button class="btn-logout" id="logout-btn">Log out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="stats-row">
+      <div class="stat-card"><div class="sv" id="st-agents">0</div><div class="sl">Total agents</div></div>
+      <div class="stat-card"><div class="sv" id="st-topups">0</div><div class="sl">Top-ups this session</div></div>
+      <div class="stat-card"><div class="sv" id="st-given">Rs. 0</div><div class="sl">Points given this session</div></div>
+      <div class="stat-card"><div class="sv" id="st-txns">0</div><div class="sl">Total transactions</div></div>
+    </div>
+
+    <div class="action-row">
+      <button class="action-btn" id="contacts-btn"><span class="aicon">📞</span> Deposit Contacts</button>
+      <button class="action-btn" id="sportevents-btn"><span class="aicon">🏟️</span> Sport Events</button>
+      <button class="action-btn" id="sportbets-btn"><span class="aicon">⚽</span> Sport Bets <span class="player-count-badge" id="sportbets-badge" style="display:none;">0</span></button>
+      <button class="action-btn" id="players-btn"><span class="aicon">👥</span> Players <span class="player-count-badge" id="player-count-badge" style="display:none;">0</span></button>
+      <button class="action-btn" id="new-agent-btn"><span class="aicon">👤</span> New Agent</button>
+      <button class="action-btn" id="topup-btn"><span class="aicon">💰</span> Agent Top-up</button>
+      <button class="action-btn" id="txns-btn"><span class="aicon">📋</span> Transactions</button>
+      <button class="action-btn" id="reports-btn"><span class="aicon">📅</span> Monthly Report</button>
+      <button class="action-btn" id="issues-btn"><span class="aicon">💬</span> Issues <span class="player-count-badge" id="issues-badge" style="display:none;">0</span></button>
+      <button class="action-btn" id="send-msg-btn"><span class="aicon">📢</span> Send Message</button>
+      <button class="action-btn" id="agentweb-btn"><span class="aicon">🌐</span> Agent Web</button>
+    </div>
+
+    <div class="agents-section">
+      <div class="sec-title">
+        <span>All Agents</span>
+        <button class="btn-sm" id="refresh-btn">↻ Refresh</button>
+      </div>
+      <div class="table-wrap"><div id="agents-table"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW AGENT MODAL -->
+<div class="overlay" id="modal-new-agent">
+  <div class="modal">
+    <button class="mclose" id="na-close-btn">✕</button>
+    <div class="modal-title">Create New Agent</div>
+    <div class="merr" id="na-err"></div>
+    <div class="mfield"><label>Agent Full Name</label><input type="text" id="na-name" placeholder="Enter agent full name" /></div>
+    <div class="mfield"><label>City</label><input type="text" id="na-city" placeholder="Enter city" /></div>
+    <div class="mfield"><label>Street Name</label><input type="text" id="na-street" placeholder="Enter street name" /></div>
+    <button class="btn-submit" id="create-agent-btn">Create Agent</button>
+    <button class="btn-cancel" id="na-cancel-btn" onclick="closeModal('modal-new-agent')">Cancel</button>
+    <div class="creds-box" id="na-creds">
+      <div class="creds-title">Agent Created — Save these details!</div>
+      <div class="cred-row"><span class="cred-label">Agent Name</span><span class="cred-val" id="cr-name"></span></div>
+      <div class="cred-row"><span class="cred-label">Agent ID</span><span class="cred-val" id="cr-uid"></span></div>
+      <div class="cred-row"><span class="cred-label">Username</span><span class="cred-val" id="cr-user"></span></div>
+      <div class="cred-row"><span class="cred-label">Password</span><span class="cred-val" id="cr-pass"></span></div>
+      <div class="cred-row"><span class="cred-label">City</span><span class="cred-val" id="cr-city"></span></div>
+      <div class="cred-row"><span class="cred-label">Street</span><span class="cred-val" id="cr-street"></span></div>
+      <div class="cred-row"><span class="cred-label">Balance</span><span class="cred-val">Rs. 0.00</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- AGENT TOP-UP MODAL -->
+<div class="overlay" id="modal-topup">
+  <div class="modal">
+    <button class="mclose" id="tu-close-btn">✕</button>
+    <div class="modal-title">Agent Top-up</div>
+    <div class="merr" id="tu-err"></div>
+    <div class="mfield">
+      <label>Search Agent by ID</label>
+      <div class="search-wrap">
+        <input type="text" id="agent-search" placeholder="Type agent ID to search..." oninput="searchAgents()" onfocus="searchAgents()" />
+        <div class="search-dropdown" id="search-dropdown"></div>
+      </div>
+      <div class="selected-agent" id="selected-agent-box">
+        <div class="sa-id" id="sa-id"></div>
+        <div class="sa-name" id="sa-name"></div>
+        <div class="sa-bal" id="sa-bal"></div>
+      </div>
+    </div>
+    <div class="mfield"><label>Amount to Add (Rs. NPR)</label><input type="number" id="tu-amount" placeholder="e.g. 5000" min="1" /></div>
+    <button class="btn-submit" id="topup-confirm-btn">Add Balance to Agent</button>
+    <button class="btn-cancel" id="topup-cancel-btn">Cancel / Clear</button>
+    <div class="msuccess" id="tu-success"></div>
+  </div>
+</div>
+
+<!-- TRANSACTIONS MODAL -->
+<div class="overlay" id="modal-txns">
+  <div class="modal" style="max-width:560px;">
+    <button class="mclose" id="tx-close-btn">✕</button>
+    <div class="modal-title">Transaction History</div>
+    <div class="txn-filter">
+      <input type="text" id="txn-search" placeholder="Search by agent ID or name..." oninput="renderTxns()" />
+    </div>
+    <div class="txn-summary">
+      <div class="txn-sum-card"><div class="txn-sum-val" id="txn-total-count">0</div><div class="txn-sum-lbl">Total transactions</div></div>
+      <div class="txn-sum-card"><div class="txn-sum-val" id="txn-total-amt">Rs. 0</div><div class="txn-sum-lbl">Total sent</div></div>
+      <div class="txn-sum-card"><div class="txn-sum-val" id="txn-cancelled-count">0</div><div class="txn-sum-lbl">Cancelled</div></div>
+    </div>
+    <div id="txn-list"></div>
+  </div>
+</div>
+
+<!-- MONTHLY REPORT MODAL -->
+<div class="overlay" id="modal-report">
+  <div class="modal" style="max-width:640px;">
+    <button class="mclose" id="rpt-close-btn">✕</button>
+    <div class="modal-title">Monthly Transaction Report</div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:flex-end;">
+      <div style="flex:1;min-width:140px;">
+        <label style="display:block;font-size:12px;color:#4a6ab0;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Select Month</label>
+        <input type="month" id="rpt-month" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #1a3a7c;background:#060d1a;font-size:15px;color:#e0e8ff;outline:none;" />
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <label style="display:block;font-size:12px;color:#4a6ab0;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Filter Agent</label>
+        <select id="rpt-agent" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #1a3a7c;background:#060d1a;font-size:14px;color:#e0e8ff;outline:none;">
+          <option value="">All Agents</option>
+        </select>
+      </div>
+      <button class="btn-submit" id="rpt-run-btn" style="height:42px;margin-top:0;flex:0 0 auto;padding:0 20px;">Generate</button>
+    </div>
+
+    <!-- Summary cards -->
+    <div id="rpt-summary" style="display:none;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem;">
+        <div class="stat-card"><div class="sv" id="rpt-total-dep">Rs. 0</div><div class="sl">Total deposited by agents</div></div>
+        <div class="stat-card"><div class="sv" id="rpt-total-wd">Rs. 0</div><div class="sl">Total withdrawn by customers</div></div>
+        <div class="stat-card"><div class="sv" id="rpt-total-topup">Rs. 0</div><div class="sl">Total admin top-ups</div></div>
+        <div class="stat-card"><div class="sv" id="rpt-txn-count">0</div><div class="sl">Total transactions</div></div>
+      </div>
+
+      <!-- Per-agent breakdown -->
+      <div id="rpt-agent-breakdown"></div>
+    </div>
+
+    <div id="rpt-empty" style="display:none;text-align:center;padding:2rem;color:#4a6ab0;font-size:14px;">No transactions found for this period.</div>
+    <div id="rpt-loading" style="text-align:center;padding:2rem;color:#4a6ab0;font-size:14px;display:none;">Loading...</div>
+  </div>
+</div>
+
+<style>
+  .rpt-agent-card { background:#060d1a; border:1px solid #1a3a7c; border-radius:12px; margin-bottom:12px; overflow:hidden; }
+  .rpt-agent-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; gap:8px; flex-wrap:wrap; }
+  .rpt-agent-header:hover { background:#0a1525; }
+  .rpt-agent-name { font-size:15px; font-weight:700; color:#fff; }
+  .rpt-agent-id { font-size:12px; color:#4a6ab0; margin-top:2px; }
+  .rpt-agent-totals { display:flex; gap:12px; flex-wrap:wrap; }
+  .rpt-atot { text-align:right; }
+  .rpt-atot-val { font-size:14px; font-weight:700; }
+  .rpt-atot-lbl { font-size:10px; color:#4a6ab0; }
+  .rpt-agent-rows { display:none; border-top:1px solid #1a3a7c; }
+  .rpt-agent-rows.open { display:block; }
+  .rpt-row { display:flex; justify-content:space-between; align-items:center; padding:10px 16px; border-bottom:1px solid #0d1b33; font-size:13px; flex-wrap:wrap; gap:6px; }
+  .rpt-row:last-child { border-bottom:none; }
+  .rpt-row-left { color:#c8d4f0; }
+  .rpt-row-date { font-size:11px; color:#4a6ab0; margin-top:2px; }
+  .rpt-row-right { display:flex; align-items:center; gap:8px; }
+  .rpt-row-amt { font-size:14px; font-weight:700; }
+  .rpt-row-amt.dep { color:#4ade80; }
+  .rpt-row-amt.wd { color:#fb923c; }
+  .rpt-row-amt.topup { color:#7eb3ff; }
+  .btn-delete { background: rgba(231,76,60,0.15); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3); border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .btn-delete:hover { background: rgba(231,76,60,0.3); }
+  .btn-view { background: rgba(126,179,255,0.1); color: #7eb3ff; border: 1px solid rgba(126,179,255,0.3); border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; margin-right: 4px; }
+  .btn-view:hover { background: rgba(126,179,255,0.2); }
+  .player-card { background: #060d1a; border: 1px solid #1a3a7c; border-radius: 10px; padding: 1rem; margin-bottom: 10px; }
+  .player-card-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .player-name { font-size: 14px; font-weight: 700; color: #fff; }
+  .player-uid { font-size: 11px; color: #4a6ab0; margin-top: 2px; }
+  .player-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .pstat { font-size: 12px; color: #4a6ab0; background: #0a1525; border-radius: 6px; padding: 3px 10px; }
+  .pstat strong { color: #7eb3ff; }
+  .player-count-badge { background: #e74c3c; color: #fff; border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 700; margin-left: 6px; }
+
+  /* AGENT WEB STYLES */
+  .aw-section { margin-bottom:1.25rem; }
+  .aw-section-title { font-size:13px; font-weight:700; color:#7eb3ff; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #1a3a7c; }
+  .crypto-list { display:flex; flex-direction:column; gap:10px; }
+  .crypto-row { background:#060d1a; border:1px solid #1a3a7c; border-radius:10px; padding:12px; position:relative; }
+  .crypto-row-top { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+  .crypto-row input { width:100%; padding:8px 10px; border-radius:6px; border:1px solid #1a3a7c; background:#0a1525; font-size:13px; color:#e0e8ff; outline:none; }
+  .crypto-row input:focus { border-color:#2255b8; }
+  .crypto-row input::placeholder { color:#4a6ab0; }
+  .crypto-remove { position:absolute; top:8px; right:10px; background:rgba(231,76,60,0.15); color:#e74c3c; border:none; border-radius:6px; padding:3px 10px; font-size:11px; cursor:pointer; }
+  .btn-add-crypto { background:rgba(74,222,128,0.1); color:#4ade80; border:1px solid rgba(74,222,128,0.3); border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; width:100%; margin-top:8px; font-weight:600; }
+  .btn-add-crypto:hover { background:rgba(74,222,128,0.2); }
+  .agent-web-link { background:#060d1a; border:1px solid #2255b8; border-radius:8px; padding:10px 14px; font-size:12px; color:#7eb3ff; word-break:break-all; margin-top:6px; }
+
+  /* PENDING DEPOSITS */
+  .dep-req { background:#060d1a; border:1px solid #1a3a7c; border-radius:10px; padding:1rem; margin-bottom:10px; }
+  .dep-req-top { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .dep-req-agent { font-size:14px; font-weight:700; color:#fff; }
+  .dep-req-time { font-size:11px; color:#4a6ab0; margin-top:2px; }
+  .dep-req-amount { font-size:18px; font-weight:700; color:#4ade80; }
+  .dep-req-coin { font-size:11px; color:#7eb3ff; margin-top:2px; text-align:right; }
+  .dep-req-hash { background:#0a1525; border-radius:6px; padding:8px 10px; font-size:11px; color:#c8d4f0; word-break:break-all; margin-bottom:10px; }
+  .dep-req-hash a { color:#7eb3ff; }
+  .dep-req-btns { display:flex; gap:8px; }
+  .btn-approve { flex:1; padding:8px; background:rgba(74,222,128,0.15); color:#4ade80; border:1px solid rgba(74,222,128,0.3); border-radius:6px; font-size:13px; font-weight:700; cursor:pointer; }
+  .btn-approve:hover { background:rgba(74,222,128,0.25); }
+  .btn-reject { flex:1; padding:8px; background:rgba(231,76,60,0.15); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); border-radius:6px; font-size:13px; font-weight:700; cursor:pointer; }
+  .btn-reject:hover { background:rgba(231,76,60,0.25); }
+  .dep-badge-pending { background:rgba(250,196,0,0.15); color:#f6c90e; border:1px solid rgba(250,196,0,0.3); border-radius:20px; padding:2px 10px; font-size:10px; font-weight:700; }
+  .dep-badge-approved { background:rgba(74,222,128,0.1); color:#4ade80; border:1px solid rgba(74,222,128,0.3); border-radius:20px; padding:2px 10px; font-size:10px; font-weight:700; }
+  .dep-badge-rejected { background:rgba(231,76,60,0.1); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); border-radius:20px; padding:2px 10px; font-size:10px; font-weight:700; }
+  .pending-count { background:#e74c3c; color:#fff; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:700; margin-left:6px; display:none; }
+</style>
+
+<!-- ISSUES MODAL -->
+<div class="overlay" id="modal-issues">
+  <div class="modal" style="max-width:640px;">
+    <button class="mclose" id="issues-close">✕</button>
+    <div class="modal-title">Player Issues <span id="issues-total" style="font-size:13px;color:#4a6ab0;font-weight:400;"></span></div>
+    <div id="issues-list"><div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading...</div></div>
+  </div>
+</div>
+
+<!-- SEND MESSAGE MODAL -->
+<div class="overlay" id="modal-sendmsg">
+  <div class="modal" style="max-width:520px;">
+    <button class="mclose" id="sendmsg-close">✕</button>
+    <div class="modal-title">Send Message to Players</div>
+    <div class="merr" id="sendmsg-err"></div>
+    <div class="mfield">
+      <label>Send To</label>
+      <select id="sendmsg-target" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #1a3a7c;background:#060d1a;color:#e0e8ff;outline:none;">
+        <option value="all">All Players</option>
+      </select>
+    </div>
+    <div class="mfield">
+      <label>Message</label>
+      <textarea id="sendmsg-text" rows="4" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #1a3a7c;background:#060d1a;font-size:14px;color:#e0e8ff;outline:none;resize:vertical;" placeholder="Type your message to players..."></textarea>
+    </div>
+    <button class="btn-submit" id="sendmsg-btn">Send to All Players</button>
+    <div class="msuccess" id="sendmsg-suc"></div>
+
+    <div style="margin-top:1.5rem;">
+      <div style="font-size:13px;font-weight:700;color:#7eb3ff;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+        Recent Messages Sent
+        <button class="btn-sm" id="refresh-msgs-btn">↻ Refresh</button>
+      </div>
+      <div id="sent-msgs-list"><div style="color:#4a6ab0;font-size:13px;">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACTS MODAL -->
+<div class="overlay" id="modal-contacts">
+  <div class="modal" style="max-width:580px;">
+    <button class="mclose" id="contacts-close">✕</button>
+    <div class="modal-title">Deposit Contacts</div>
+    <div class="modal-sub">Add Telegram/WhatsApp links shown to players on deposit page</div>
+    <div style="background:#060d1a;border:1px solid #1a3a7c;border-radius:12px;padding:1rem;margin-bottom:1rem;">
+      <div style="font-size:13px;font-weight:700;color:#7eb3ff;margin-bottom:10px;" id="ct-form-title">Add New Contact</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Type</label>
+          <select id="ct-type" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;">
+            <option value="telegram">✈️ Telegram</option>
+            <option value="whatsapp">📱 WhatsApp</option>
+            <option value="other">🔗 Other</option>
+          </select></div>
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Display Name</label>
+          <input type="text" id="ct-name" placeholder="e.g. Agent John" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+      </div>
+      <div style="margin-bottom:8px;"><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Link / URL</label>
+        <input type="text" id="ct-link" placeholder="e.g. https://t.me/yourusername or https://wa.me/9779800000000" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Username (optional)</label>
+          <input type="text" id="ct-username" placeholder="@username" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Note (optional)</label>
+          <input type="text" id="ct-note" placeholder="e.g. Available 9am-9pm" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+      </div>
+      <div class="merr" id="ct-err"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn-submit" id="ct-save-btn" style="flex:1;">Add Contact</button>
+        <button id="ct-cancel-btn" style="padding:10px 16px;background:#060d1a;color:#4a6ab0;border:1px solid #1a3a7c;border-radius:8px;font-size:13px;cursor:pointer;display:none;">Cancel</button>
+      </div>
+    </div>
+    <div id="ct-list"><div style="text-align:center;padding:1rem;color:#4a6ab0;">Loading...</div></div>
+  </div>
+</div>
+
+<!-- SPORT EVENTS MODAL -->
+<div class="overlay" id="modal-sportevents">
+  <div class="modal" style="max-width:660px;">
+    <button class="mclose" id="sportevents-close">✕</button>
+    <div class="modal-title">Manage Sport Events</div>
+    <div style="background:#060d1a;border:1px solid #1a3a7c;border-radius:12px;padding:1rem;margin-bottom:1rem;">
+      <div style="font-size:13px;font-weight:700;color:#7eb3ff;margin-bottom:10px;" id="se-form-title">Add New Event</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Sport</label>
+          <select id="se-sport" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;">
+            <option>Football</option><option>Cricket</option><option>Basketball</option><option>Tennis</option><option>Hockey</option><option>Rugby</option><option>Baseball</option><option>Horse Racing</option>
+          </select></div>
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">League</label>
+          <input type="text" id="se-league" placeholder="e.g. Premier League" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Team 1 / Home</label>
+          <input type="text" id="se-t1" placeholder="e.g. Arsenal" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Team 2 / Away</label>
+          <input type="text" id="se-t2" placeholder="e.g. Chelsea" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Home Odds</label>
+          <input type="number" id="se-oh" placeholder="1.85" step="0.01" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Draw Odds</label>
+          <input type="number" id="se-od" placeholder="3.20" step="0.01" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Away Odds</label>
+          <input type="number" id="se-oa" placeholder="4.10" step="0.01" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+        <div><label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;display:block;margin-bottom:4px;">Type</label>
+          <select id="se-type" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;">
+            <option value="">3-Way (H/D/A)</option><option value="2way">2-Way (H/A)</option>
+          </select></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e0e8ff;cursor:pointer;">
+          <input type="checkbox" id="se-live" style="width:16px;height:16px;"/> Mark as LIVE
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e0e8ff;cursor:pointer;">
+          <input type="checkbox" id="se-active" checked style="width:16px;height:16px;"/> Active (show to players)
+        </label>
+      </div>
+      <div class="merr" id="se-err"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn-submit" id="se-save-btn" style="flex:1;">Save Event</button>
+        <button id="se-cancel-btn" style="padding:10px 16px;background:#060d1a;color:#4a6ab0;border:1px solid #1a3a7c;border-radius:8px;font-size:13px;cursor:pointer;display:none;">Cancel Edit</button>
+      </div>
+    </div>
+    <div id="se-list"><div style="text-align:center;padding:1rem;color:#4a6ab0;">Loading events...</div></div>
+  </div>
+</div>
+
+<!-- SPORT BETS MODAL -->
+<div class="overlay" id="modal-sportbets">
+  <div class="modal" style="max-width:700px;">
+    <button class="mclose" id="sportbets-close">✕</button>
+    <div class="modal-title">Sport Bets <span id="sportbets-total" style="font-size:13px;color:#4a6ab0;font-weight:400;"></span></div>
+    <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
+      <button class="btn-sm sb-filter-btn active" data-f="pending">Pending</button>
+      <button class="btn-sm sb-filter-btn" data-f="won">Won</button>
+      <button class="btn-sm sb-filter-btn" data-f="lost">Lost</button>
+      <button class="btn-sm sb-filter-btn" data-f="all">All</button>
+      <button class="btn-sm" id="sportbets-refresh">↻ Refresh</button>
+    </div>
+    <div id="sportbets-list"><div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading...</div></div>
+  </div>
+</div>
+
+<!-- PLAYERS MODAL -->
+<div class="overlay" id="modal-players">
+  <div class="modal" style="max-width:700px;">
+    <button class="mclose" id="players-close-btn">✕</button>
+    <div class="modal-title">All Players <span id="players-total" style="font-size:14px;color:#4a6ab0;font-weight:400;"></span></div>
+    <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
+      <input type="text" id="player-search-inp" placeholder="Search by username or ID..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #1a3a7c;background:#060d1a;color:#e0e8ff;outline:none;font-size:13px;"/>
+      <button class="btn-sm" id="player-search-btn">Search</button>
+      <button class="btn-sm" id="player-refresh-btn">↻ Refresh</button>
+    </div>
+    <div id="players-list"><div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading players...</div></div>
+  </div>
+</div>
+
+<!-- PLAYER DETAIL MODAL -->
+<div class="overlay" id="modal-player-detail">
+  <div class="modal" style="max-width:560px;">
+    <button class="mclose" id="pd-detail-close">✕</button>
+    <div class="modal-title" id="pd-detail-title">Player Details</div>
+    <div id="pd-detail-body"></div>
+  </div>
+</div>
+<div class="overlay" id="modal-agentweb">
+  <div class="modal" style="max-width:560px;background:#0d1b33;border:1px solid #1a3a7c;">
+    <button class="mclose" id="aw-close-btn" style="color:#4a6ab0;">✕</button>
+    <div class="modal-title" style="color:#fff;">Agent Web Settings</div>
+
+    <div class="aw-section">
+      <div class="aw-section-title">Select Agent</div>
+      <select id="aw-agent-sel" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #1a3a7c;background:#060d1a;font-size:14px;color:#e0e8ff;outline:none;margin-bottom:8px;">
+        <option value="">— Choose an agent —</option>
+      </select>
+      <div id="aw-link-wrap" style="display:none;">
+        <div style="font-size:12px;color:#4a6ab0;margin-bottom:4px;">Deposit page link to share with customers:</div>
+        <div class="agent-web-link" id="aw-link"></div>
+        <button class="btn-add-crypto" style="margin-top:6px;" id="aw-copy-link">Copy Link</button>
+      </div>
+    </div>
+
+    <div class="aw-section">
+      <div class="aw-section-title">Crypto Payment Options</div>
+      <div class="crypto-list" id="crypto-list"></div>
+      <button class="btn-add-crypto" id="aw-add-crypto-btn">+ Add Crypto Option</button>
+    </div>
+
+    <button class="btn-submit" id="aw-save-btn" style="margin-top:0.5rem;">💾 Save Settings</button>
+    <div class="msuccess" id="aw-success"></div>
+    <div class="merr" id="aw-err"></div>
+  </div>
+</div>
+
+<!-- PENDING DEPOSITS MODAL -->
+<div class="overlay" id="modal-pending">
+  <div class="modal" style="max-width:560px;background:#0d1b33;border:1px solid #1a3a7c;">
+    <button class="mclose" id="pd-close-btn" style="color:#4a6ab0;">✕</button>
+    <div class="modal-title" style="color:#fff;">📥 Pending Deposits <span id="pending-badge" class="pending-count"></span></div>
+    <div style="display:flex;gap:8px;margin-bottom:1rem;">
+      <button class="btn-sm" id="pd-filter-all" style="background:#1a3a7c;color:#fff;">All</button>
+      <button class="btn-sm" id="pd-filter-pending">Pending</button>
+      <button class="btn-sm" id="pd-filter-approved">Approved</button>
+    </div>
+    <div id="pd-list"><div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading...</div></div>
+  </div>
+</div>
+
+<script>
+  // Global login function so onclick works
+  var ADMIN_USER = 'nepalcanmove';
+  var ADMIN_PASS = 'nepalismovingfast@#20';
+  var FB = 'https://topcasinos-b75b3-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  function adminLogin() {
+    var u = document.getElementById('l-user').value.trim();
+    var p = document.getElementById('l-pass').value.trim();
+    var err = document.getElementById('login-err');
+    err.style.display = 'none';
+    if (u === ADMIN_USER && p === ADMIN_PASS) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('panel').classList.add('active');
+      if (typeof loadAll === 'function') loadAll();
+    } else {
+      err.textContent = 'Incorrect username or password.';
+      err.style.display = 'block';
+    }
+  }
+
+(function() {
+  var ADMIN_USER = 'nepalcanmove';
+  var ADMIN_PASS = 'nepalismovingfast@#20';
+  var FB = 'https://topcasinos-b75b3-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  var sessionTopups = 0;
+  var sessionGiven  = 0;
+  var selectedAgentId = null;
+  var cachedAgents  = {};
+  var cachedTxns    = [];
+
+  function fbGet(path) { return fetch(FB + path + '.json').then(function(r){return r.json();}); }
+  function fbSet(path, data) { return fetch(FB + path + '.json', {method:'PUT', body:JSON.stringify(data)}); }
+  function fbUpdate(path, data) { return fetch(FB + path + '.json', {method:'PATCH', body:JSON.stringify(data)}); }
+  function fbPush(path, data) { return fetch(FB + path + '.json', {method:'POST', body:JSON.stringify(data)}).then(function(r){return r.json();}); }
+  function fbDel(path) { return fetch(FB + path + '.json', {method:'DELETE'}).then(function(r){return r.json();}); }
+
+  function fmt(n) { return 'Rs. ' + Number(n).toLocaleString('en-NP', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function showErr(id, msg) { var e=document.getElementById(id); e.textContent=msg; e.style.display='block'; }
+  function hideEl(id) { document.getElementById(id).style.display='none'; }
+  function showEl(id, msg) { var e=document.getElementById(id); if(msg) e.textContent=msg; e.style.display='block'; }
+
+  function genAgentId(count) {
+    var base   = 106306 + Math.floor(count / 3);
+    var suffix = [1,2,3][count % 3];
+    return String(base) + suffix;
+  }
+  function genPassword(name) {
+    var base = name.split(' ')[0].toLowerCase();
+    var nums = Math.floor(1000 + Math.random() * 9000);
+    var syms = ['@#','!$','#&','@!'][Math.floor(Math.random()*4)];
+    return base + syms + nums;
+  }
+
+  // ── AUTH ──
+  function doLogin() { adminLogin(); }
+
+  function doLogout() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('panel').classList.remove('active');
+    document.getElementById('l-user').value = '';
+    document.getElementById('l-pass').value = '';
+    hideEl('login-err');
+    sessionTopups = 0; sessionGiven = 0;
+    cachedAgents = {}; cachedTxns = [];
+  }
+
+  // ── LOAD ALL ──
+  function loadAll() {
+    window.loadAll = loadAll;
+    // Load player count for badge
+    fbGet('/players').then(function(players){
+      if(!players)return;
+      var count=Object.keys(players).length;
+      allPlayersCache=players;
+      var badge=document.getElementById('player-count-badge');
+      if(badge){badge.textContent=count;badge.style.display='inline';}
+    }).catch(function(){});
+    checkIssuesCount();
+    // Check pending sport bets
+    fbGet('/sportBets').then(function(data){
+      if(!data)return;
+      var pending=Object.values(data).filter(function(b){return !b.settled;}).length;
+      if(pending>0){var sb=document.getElementById('sportbets-badge');if(sb){sb.textContent=pending;sb.style.display='inline';}}
+    }).catch(function(){});
+    Promise.all([fbGet('/cryptoDeposits'), fbGet('/playerCryptoDeposits')]).then(function(results) {
+      var count = 0;
+      if (results[0]) count += Object.values(results[0]).filter(function(d){ return d.status==='pending'; }).length;
+      if (results[1]) count += Object.values(results[1]).filter(function(d){ return d.status==='pending'; }).length;
+      updatePendingBadge(count);
+    }).catch(function(){});
+    fbGet('/agents').then(function(agents) {
+      cachedAgents = agents || {};
+      renderAgents();
+      updateStats();
+    }).catch(function(e) {
+      document.getElementById('agents-table').innerHTML = '<div class="no-data">Connection error: ' + e.message + '</div>';
+    });
+    fbGet('/adminTxns').then(function(txns) {
+      if (txns) {
+        cachedTxns = Object.entries(txns).map(function(entry) {
+          return Object.assign({}, entry[1], {_key: entry[0]});
+        });
+        cachedTxns.sort(function(a,b){ return new Date(b.time) - new Date(a.time); });
+      } else {
+        cachedTxns = [];
+      }
+      updateStats();
+    }).catch(function(){});
+  }
+
+  // ── MODALS ──
+  function openModal(id) {
+    if (id === 'modal-new-agent') {
+      hideEl('na-err'); hideEl('na-creds');
+      document.getElementById('na-name').value = '';
+      document.getElementById('na-city').value = '';
+      document.getElementById('na-street').value = '';
+    }
+    if (id === 'modal-topup') {
+      hideEl('tu-err'); hideEl('tu-success');
+      document.getElementById('agent-search').value = '';
+      document.getElementById('tu-amount').value = '';
+      document.getElementById('selected-agent-box').style.display = 'none';
+      document.getElementById('search-dropdown').classList.remove('open');
+      selectedAgentId = null;
+      renderSearchDropdown('');
+    }
+    if (id === 'modal-txns') { renderTxns(); }
+    if (id === 'modal-report') { initReport(); }
+    if (id === 'modal-agentweb') { initAgentWeb(); }
+    if (id === 'modal-pending') { loadPendingDeposits(); }
+    document.getElementById(id).classList.add('open');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+    loadAll();
+  }
+
+  // ── CREATE AGENT ──
+  function createAgent() {
+    hideEl('na-err'); hideEl('na-creds');
+    var name   = document.getElementById('na-name').value.trim();
+    var city   = document.getElementById('na-city').value.trim();
+    var street = document.getElementById('na-street').value.trim();
+    if (!name)   { showErr('na-err','Please enter the agent full name.'); return; }
+    if (!city)   { showErr('na-err','Please enter the city.'); return; }
+    if (!street) { showErr('na-err','Please enter the street name.'); return; }
+    var btn = document.getElementById('create-agent-btn');
+    btn.textContent = 'Creating...'; btn.disabled = true;
+    var count   = Object.keys(cachedAgents).length;
+    var agentId = genAgentId(count);
+    var username= 'agent_' + agentId;
+    var password= genPassword(name);
+    var data    = { name:name, city:city, street:street, username:username, password:password, agentId:agentId, balance:0, createdAt: new Date().toISOString() };
+    
+    var saveUrl = FB + '/agents/' + agentId + '.json';
+    fetch(saveUrl, {method:'PUT', body:JSON.stringify(data)})
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' — Firebase rejected the write. Check your database rules.');
+      return r.json();
+    })
+    .then(function() {
+      cachedAgents[agentId] = data;
+      document.getElementById('cr-name').textContent   = name;
+      document.getElementById('cr-uid').textContent    = agentId;
+      document.getElementById('cr-user').textContent   = username;
+      document.getElementById('cr-pass').textContent   = password;
+      document.getElementById('cr-city').textContent   = city;
+      document.getElementById('cr-street').textContent = street;
+      document.getElementById('na-creds').style.display = 'block';
+      document.getElementById('na-name').value  = '';
+      document.getElementById('na-city').value  = '';
+      document.getElementById('na-street').value= '';
+      updateStats();
+      btn.textContent = 'Create Agent'; btn.disabled = false;
+    }).catch(function(e) {
+      showErr('na-err','Failed to save: ' + e.message + '. Make sure Firebase rules allow write access.');
+      btn.textContent = 'Create Agent'; btn.disabled = false;
+    });
+  }
+
+  // ── SEARCH ──
+  function renderSearchDropdown(q) {
+    var dropdown = document.getElementById('search-dropdown');
+    var keys = Object.keys(cachedAgents);
+    var matches = keys.filter(function(k) {
+      return cachedAgents[k].agentId.toLowerCase().indexOf(q) !== -1 ||
+             cachedAgents[k].name.toLowerCase().indexOf(q) !== -1;
+    });
+    if (!matches.length) {
+      dropdown.innerHTML = '<div class="sdrop-empty">No agents found</div>';
+    } else {
+      dropdown.innerHTML = matches.map(function(k) {
+        return '<div class="sdrop-item" data-agent="' + k + '">' + cachedAgents[k].agentId + ' — ' + cachedAgents[k].name + '</div>';
+      }).join('');
+      dropdown.querySelectorAll('.sdrop-item').forEach(function(el) {
+        el.addEventListener('click', function(){ selectAgent(el.dataset.agent); });
+      });
+    }
+    dropdown.classList.add('open');
+  }
+
+  function searchAgents() {
+    var q = document.getElementById('agent-search').value.trim().toLowerCase();
+    renderSearchDropdown(q);
+  }
+
+  function selectAgent(agentId) {
+    var a = cachedAgents[agentId];
+    if (!a) return;
+    selectedAgentId = agentId;
+    document.getElementById('agent-search').value = a.agentId;
+    document.getElementById('search-dropdown').classList.remove('open');
+    document.getElementById('sa-id').textContent   = 'Agent ID: ' + a.agentId;
+    document.getElementById('sa-name').textContent = a.name + ' · ' + a.city;
+    document.getElementById('sa-bal').textContent  = 'Current balance: ' + fmt(a.balance || 0);
+    document.getElementById('selected-agent-box').style.display = 'block';
+    hideEl('tu-err'); hideEl('tu-success');
+  }
+
+  // ── TOPUP ──
+  function doTopup() {
+    hideEl('tu-err'); hideEl('tu-success');
+    if (!selectedAgentId) { showErr('tu-err','Please select an agent.'); return; }
+    var amt = parseFloat(document.getElementById('tu-amount').value);
+    if (!amt || amt < 1) { showErr('tu-err','Please enter a valid amount (minimum Rs. 1).'); return; }
+    var btn = document.getElementById('topup-confirm-btn');
+    btn.textContent = 'Processing...'; btn.disabled = true;
+    var agent  = cachedAgents[selectedAgentId];
+    var newBal = (agent.balance || 0) + amt;
+    fbUpdate('/agents/' + selectedAgentId, { balance: newBal }).then(function() {
+      var txnData = { id:'TXN'+Date.now(), agentId:selectedAgentId, agentName:agent.name, amount:amt, time:new Date().toISOString(), cancelled:false };
+      return fbPush('/adminTxns', txnData).then(function(pushed) {
+        txnData._key = pushed.name;
+        cachedAgents[selectedAgentId].balance = newBal;
+        cachedTxns.unshift(txnData);
+        sessionTopups++; sessionGiven += amt;
+        document.getElementById('sa-bal').textContent = 'Current balance: ' + fmt(newBal);
+        showEl('tu-success', '' + fmt(amt) + ' added to Agent ' + selectedAgentId + '. New balance: ' + fmt(newBal));
+        document.getElementById('tu-amount').value = '';
+        updateStats();
+        btn.textContent = 'Add Balance to Agent'; btn.disabled = false;
+      });
+    }).catch(function(e) {
+      showErr('tu-err','Error: ' + e.message);
+      btn.textContent = 'Add Balance to Agent'; btn.disabled = false;
+    });
+  }
+
+  function cancelTopup() {
+    document.getElementById('agent-search').value = '';
+    document.getElementById('tu-amount').value = '';
+    document.getElementById('selected-agent-box').style.display = 'none';
+    document.getElementById('search-dropdown').classList.remove('open');
+    hideEl('tu-err'); hideEl('tu-success');
+    selectedAgentId = null;
+  }
+
+  // ── CANCEL TXN ──
+  function cancelTxn(txnKey) {
+    var txn = cachedTxns.find(function(t){ return t._key === txnKey; });
+    if (!txn || txn.cancelled) return;
+    if (!confirm('Cancel this transaction? This will deduct ' + fmt(txn.amount) + ' from the agent balance.')) return;
+    var agent  = cachedAgents[txn.agentId];
+    var newBal = Math.max(0, (agent ? agent.balance : 0) - txn.amount);
+    fbUpdate('/agents/' + txn.agentId, { balance: newBal }).then(function() {
+      return fbUpdate('/adminTxns/' + txnKey, { cancelled:true, cancelledAt: new Date().toISOString() });
+    }).then(function() {
+      txn.cancelled = true; txn.cancelledAt = new Date().toISOString();
+      if (agent) { agent.balance = newBal; }
+      renderTxns(); updateStats();
+    }).catch(function(e){ alert('Error: ' + e.message); });
+  }
+
+  // ── RENDER TXNS ──
+  function renderTxns() {
+    var q = document.getElementById('txn-search') ? document.getElementById('txn-search').value.trim().toLowerCase() : '';
+    var filtered  = cachedTxns.filter(function(t){ return !q || t.agentId.toLowerCase().indexOf(q)!==-1 || (t.agentName||'').toLowerCase().indexOf(q)!==-1; });
+    var active    = filtered.filter(function(t){ return !t.cancelled; });
+    var cancelled = filtered.filter(function(t){ return t.cancelled; });
+    var totalAmt  = active.reduce(function(s,t){ return s+t.amount; }, 0);
+    document.getElementById('txn-total-count').textContent    = filtered.length;
+    document.getElementById('txn-total-amt').textContent      = fmt(totalAmt);
+    document.getElementById('txn-cancelled-count').textContent= cancelled.length;
+    var wrap = document.getElementById('txn-list');
+    if (!filtered.length) { wrap.innerHTML='<div class="no-txn">No transactions yet.</div>'; return; }
+    wrap.innerHTML = filtered.map(function(t) {
+      return '<div class="txn-item" style="' + (t.cancelled?'opacity:0.5;':'') + '">' +
+        '<div class="txn-left">' +
+          '<div class="txn-agent">' + (t.agentName||t.agentId) + '</div>' +
+          '<div class="txn-agentid">Agent ID: ' + t.agentId + '</div>' +
+          '<div class="txn-time">' + new Date(t.time).toLocaleString() + (t.cancelled?' · Cancelled':'') + '</div>' +
+        '</div>' +
+        '<div class="txn-right">' +
+          '<div class="txn-amount">' + fmt(t.amount) + '</div>' +
+          (t.cancelled ? '<span class="txn-cancelled">Cancelled</span>' : '<button class="txn-cancel-btn" data-key="' + t._key + '">Cancel</button>') +
+        '</div></div>';
+    }).join('');
+    wrap.querySelectorAll('.txn-cancel-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(){ cancelTxn(btn.dataset.key); });
+    });
+  }
+
+  // ── RENDER AGENTS ──
+  function renderAgents() {
+    var keys = Object.keys(cachedAgents);
+    var wrap = document.getElementById('agents-table');
+    if (!keys.length) { wrap.innerHTML='<div class="no-data">No agents created yet. Click "New Agent" to add one.</div>'; return; }
+    var html = '<table><thead><tr><th>#</th><th>Name</th><th>Agent ID</th><th>Username</th><th>Password</th><th>City</th><th>Street</th><th>Balance (NPR)</th><th>Actions</th></tr></thead><tbody>';
+    keys.forEach(function(k, i) {
+      var a = cachedAgents[k];
+      html += '<tr>' +
+        '<td style="color:#4a6ab0;font-size:12px;">' + (i+1) + '</td>' +
+        '<td><strong style="color:#fff">' + a.name + '</strong></td>' +
+        '<td><span class="pill pill-blue">' + a.agentId + '</span></td>' +
+        '<td style="color:#7eb3ff;">' + a.username + '</td>' +
+        '<td style="color:#c8d4f0;font-size:13px;">' + a.password + '</td>' +
+        '<td>' + a.city + '</td>' +
+        '<td>' + a.street + '</td>' +
+        '<td><span class="pill pill-green">' + fmt(a.balance||0) + '</span></td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="btn-sm quick-topup-btn" data-agent="' + k + '" style="margin-right:4px;">+ Top-up</button>' +
+          '<button class="btn-delete delete-agent-btn" data-key="' + k + '" data-name="' + a.name + '">Delete</button>' +
+        '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('.quick-topup-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(){ openModal('modal-topup'); setTimeout(function(){ selectAgent(btn.dataset.agent); }, 100); });
+    });
+    wrap.querySelectorAll('.delete-agent-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(){ deleteAgent(btn.dataset.key, btn.dataset.name); });
+    });
+  }
+
+  function updateStats() {
+    document.getElementById('st-agents').textContent  = Object.keys(cachedAgents).length;
+    document.getElementById('st-topups').textContent  = sessionTopups;
+    document.getElementById('st-given').textContent   = fmt(sessionGiven);
+    document.getElementById('st-txns').textContent    = cachedTxns.length;
+  }
+
+  // ── MONTHLY REPORT ──
+  function initReport() {
+    var now = new Date();
+    var mm  = String(now.getMonth()+1).padStart(2,'0');
+    document.getElementById('rpt-month').value = now.getFullYear() + '-' + mm;
+    var sel = document.getElementById('rpt-agent');
+    sel.innerHTML = '<option value="">All Agents</option>';
+    Object.values(cachedAgents).forEach(function(a) {
+      var opt = document.createElement('option');
+      opt.value = a.agentId;
+      opt.textContent = a.agentId + ' — ' + a.name;
+      sel.appendChild(opt);
+    });
+    document.getElementById('rpt-summary').style.display = 'none';
+    document.getElementById('rpt-empty').style.display   = 'none';
+    document.getElementById('rpt-loading').style.display = 'none';
+  }
+
+  function runReport() {
+    var monthVal    = document.getElementById('rpt-month').value;
+    var agentFilter = document.getElementById('rpt-agent').value;
+    if (!monthVal) { alert('Please select a month.'); return; }
+    document.getElementById('rpt-summary').style.display = 'none';
+    document.getElementById('rpt-empty').style.display   = 'none';
+    document.getElementById('rpt-loading').style.display = 'block';
+    var parts     = monthVal.split('-');
+    var year      = parseInt(parts[0]);
+    var month     = parseInt(parts[1]);
+    var startDate = new Date(year, month-1, 1);
+    var endDate   = new Date(year, month, 1);
+
+    function inRange(t) { var d=new Date(t.time); return d>=startDate && d<endDate; }
+
+    Promise.all([fbGet('/adminTxns'), fbGet('/agentTxns')]).then(function(results) {
+      var adminRaw = results[0]; var agentRaw = results[1];
+      var adminTxns = adminRaw ? Object.entries(adminRaw).map(function(e){ return Object.assign({},e[1],{_key:e[0],_src:'topup'}); }) : [];
+      var agentTxns = agentRaw ? Object.entries(agentRaw).map(function(e){ return Object.assign({},e[1],{_key:e[0],_src:e[1].type}); }) : [];
+      var filtAdmin = adminTxns.filter(function(t){ return !t.cancelled && inRange(t) && (!agentFilter||t.agentId===agentFilter); });
+      var filtAgent = agentTxns.filter(function(t){ return inRange(t) && (!agentFilter||t.agentId===agentFilter); });
+      var allTxns   = filtAdmin.concat(filtAgent).sort(function(a,b){ return new Date(a.time)-new Date(b.time); });
+
+      document.getElementById('rpt-loading').style.display = 'none';
+      if (!allTxns.length) { document.getElementById('rpt-empty').style.display='block'; return; }
+
+      var totalTopup = filtAdmin.reduce(function(s,t){ return s+t.amount; },0);
+      var totalDep   = filtAgent.filter(function(t){ return t.type==='deposit'; }).reduce(function(s,t){ return s+t.amount; },0);
+      var totalWd    = filtAgent.filter(function(t){ return t.type==='withdraw'; }).reduce(function(s,t){ return s+t.amount; },0);
+      document.getElementById('rpt-total-dep').textContent   = fmt(totalDep);
+      document.getElementById('rpt-total-wd').textContent    = fmt(totalWd);
+      document.getElementById('rpt-total-topup').textContent = fmt(totalTopup);
+      document.getElementById('rpt-txn-count').textContent   = allTxns.length;
+
+      // Group by agent
+      var byAgent = {};
+      allTxns.forEach(function(t) {
+        if (!byAgent[t.agentId]) byAgent[t.agentId] = {topups:[],deposits:[],withdrawals:[]};
+        if (t._src==='topup') byAgent[t.agentId].topups.push(t);
+        else if (t._src==='deposit')  byAgent[t.agentId].deposits.push(t);
+        else if (t._src==='withdraw') byAgent[t.agentId].withdrawals.push(t);
+      });
+
+      var breakdown = document.getElementById('rpt-agent-breakdown');
+      breakdown.innerHTML = Object.entries(byAgent).map(function(entry) {
+        var aid  = entry[0]; var data = entry[1];
+        var agentInfo = Object.values(cachedAgents).find(function(a){ return a.agentId===aid; }) || {name:'Unknown',agentId:aid};
+        var totTopup = data.topups.reduce(function(s,t){ return s+t.amount; },0);
+        var totDep   = data.deposits.reduce(function(s,t){ return s+t.amount; },0);
+        var totWd    = data.withdrawals.reduce(function(s,t){ return s+t.amount; },0);
+        var allRows  = data.topups.map(function(t){ return Object.assign({},t,{_label:'Admin Top-up',_cls:'topup'}); })
+          .concat(data.deposits.map(function(t){ return Object.assign({},t,{_label:'Deposit → Customer #'+t.customerUid,_cls:'dep'}); }))
+          .concat(data.withdrawals.map(function(t){ return Object.assign({},t,{_label:'Withdrawal ← Customer #'+t.customerUid,_cls:'wd'}); }))
+          .sort(function(a,b){ return new Date(a.time)-new Date(b.time); });
+
+        var rowsHtml = allRows.map(function(t) {
+          return '<div class="rpt-row">' +
+            '<div class="rpt-row-left"><div>' + t._label + '</div><div class="rpt-row-date">' + new Date(t.time).toLocaleString() + '</div></div>' +
+            '<div class="rpt-row-right">' +
+              '<span class="rpt-row-amt ' + t._cls + '">' + fmt(t.amount) + '</span>' +
+              '<span class="' + (t._cls==='topup'?'badge-topup':t._cls==='dep'?'badge-dep':'badge-wd') + '">' + (t._cls==='topup'?'Top-up':t._cls==='dep'?'Deposit':'Withdraw') + '</span>' +
+            '</div></div>';
+        }).join('');
+
+        var totalsHtml = '';
+        if (totTopup>0) totalsHtml += '<div class="rpt-atot"><div class="rpt-atot-val" style="color:#7eb3ff">' + fmt(totTopup) + '</div><div class="rpt-atot-lbl">Top-ups</div></div>';
+        if (totDep>0)   totalsHtml += '<div class="rpt-atot"><div class="rpt-atot-val" style="color:#4ade80">' + fmt(totDep)   + '</div><div class="rpt-atot-lbl">Deposited</div></div>';
+        if (totWd>0)    totalsHtml += '<div class="rpt-atot"><div class="rpt-atot-val" style="color:#fb923c">' + fmt(totWd)    + '</div><div class="rpt-atot-lbl">Withdrawn</div></div>';
+
+        return '<div class="rpt-agent-card">' +
+          '<div class="rpt-agent-header" onclick="this.nextElementSibling.classList.toggle(\'open\')">' +
+            '<div><div class="rpt-agent-name">' + agentInfo.name + '</div><div class="rpt-agent-id">Agent ID: ' + aid + '</div></div>' +
+            '<div class="rpt-agent-totals">' + totalsHtml + '</div>' +
+          '</div>' +
+          '<div class="rpt-agent-rows">' + rowsHtml + '</div>' +
+        '</div>';
+      }).join('');
+
+      document.getElementById('rpt-summary').style.display = 'block';
+    }).catch(function(e) {
+      document.getElementById('rpt-loading').style.display = 'none';
+      document.getElementById('rpt-empty').textContent = 'Error: ' + e.message;
+      document.getElementById('rpt-empty').style.display = 'block';
+    });
+  }
+
+  // ── AGENT WEB ──
+  var awCryptos = [];
+  var awSelectedAgent = null;
+
+  function initAgentWeb() {
+    hideEl('aw-success'); hideEl('aw-err');
+    var sel = document.getElementById('aw-agent-sel');
+    sel.innerHTML = '<option value="">— Choose an agent —</option>';
+    Object.entries(cachedAgents).forEach(function(e) {
+      var opt = document.createElement('option');
+      opt.value = e[0];
+      opt.textContent = e[1].agentId + ' — ' + e[1].name;
+      sel.appendChild(opt);
+    });
+    awCryptos = [];
+    renderCryptoList();
+    document.getElementById('aw-link-wrap').style.display = 'none';
+    awSelectedAgent = null;
+  }
+
+  function onAwAgentSelect() {
+    var key = document.getElementById('aw-agent-sel').value;
+    document.getElementById('aw-link-wrap').style.display = 'none';
+    awSelectedAgent = null;
+    if (!key) return;
+    awSelectedAgent = key;
+    var agent = cachedAgents[key];
+    // Load existing crypto settings for this agent
+    fbGet('/agentWebSettings/' + key).then(function(settings) {
+      awCryptos = (settings && settings.cryptos) ? settings.cryptos : [];
+      if (!awCryptos.length) {
+        // Default 4 cryptos
+        awCryptos = [
+          {coin:'Bitcoin', symbol:'BTC', network:'Bitcoin Network', address:''},
+          {coin:'Ethereum', symbol:'ETH', network:'ERC-20', address:''},
+          {coin:'USDT', symbol:'USDT', network:'TRC-20 (Tron)', address:''},
+          {coin:'BNB', symbol:'BNB', network:'BEP-20 (BSC)', address:''}
+        ];
+      }
+      renderCryptoList();
+      // Show deposit page link - always use root of github pages
+      var baseUrl = window.location.origin + '/';
+      var link = baseUrl + 'TC-Deposit.html?agent=' + key;
+      document.getElementById('aw-link').textContent = link;
+      document.getElementById('aw-link-wrap').style.display = 'block';
+    }).catch(function() {
+      awCryptos = [
+        {coin:'Bitcoin', symbol:'BTC', network:'Bitcoin Network', address:''},
+        {coin:'Ethereum', symbol:'ETH', network:'ERC-20', address:''},
+        {coin:'USDT', symbol:'USDT', network:'TRC-20 (Tron)', address:''},
+        {coin:'BNB', symbol:'BNB', network:'BEP-20 (BSC)', address:''}
+      ];
+      renderCryptoList();
+      var baseUrl = window.location.origin + '/';
+      var link = baseUrl + 'TC-Deposit.html?agent=' + key;
+      document.getElementById('aw-link').textContent = link;
+      document.getElementById('aw-link-wrap').style.display = 'block';
+    });
+  }
+
+  function renderCryptoList() {
+    var wrap = document.getElementById('crypto-list');
+    wrap.innerHTML = '';
+    awCryptos.forEach(function(c, i) {
+      var row = document.createElement('div');
+      row.className = 'crypto-row';
+      row.innerHTML =
+        '<button class="crypto-remove" data-i="' + i + '">✕ Remove</button>' +
+        '<div class="crypto-row-top">' +
+          '<input type="text" placeholder="Coin name (e.g. Bitcoin)" value="' + (c.coin||'') + '" data-f="coin" data-i="' + i + '" />' +
+          '<input type="text" placeholder="Symbol (e.g. BTC)" value="' + (c.symbol||'') + '" data-f="symbol" data-i="' + i + '" />' +
+        '</div>' +
+        '<input type="text" placeholder="Network (e.g. ERC-20, TRC-20)" value="' + (c.network||'') + '" data-f="network" data-i="' + i + '" style="width:100%;margin-bottom:6px;" />' +
+        '<input type="text" placeholder="Your wallet address" value="' + (c.address||'') + '" data-f="address" data-i="' + i + '" style="width:100%;" />';
+      wrap.appendChild(row);
+    });
+    // Input listeners
+    wrap.querySelectorAll('input[data-f]').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        awCryptos[parseInt(inp.dataset.i)][inp.dataset.f] = inp.value;
+      });
+    });
+    // Remove listeners
+    wrap.querySelectorAll('.crypto-remove').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        awCryptos.splice(parseInt(btn.dataset.i), 1);
+        renderCryptoList();
+      });
+    });
+  }
+
+  function addCrypto() {
+    awCryptos.push({coin:'', symbol:'', network:'', address:''});
+    renderCryptoList();
+    document.getElementById('crypto-list').lastElementChild.querySelector('input').focus();
+  }
+
+  function saveAgentWebSettings() {
+    hideEl('aw-success'); hideEl('aw-err');
+    if (!awSelectedAgent) { showErr('aw-err', 'Please select an agent first.'); return; }
+    var invalid = awCryptos.some(function(c) { return !c.coin || !c.address; });
+    if (invalid) { showErr('aw-err', 'Please fill in coin name and wallet address for all options.'); return; }
+    var btn = document.getElementById('aw-save-btn');
+    btn.textContent = 'Saving...'; btn.disabled = true;
+    var data = { cryptos: awCryptos, updatedAt: new Date().toISOString(), agentId: cachedAgents[awSelectedAgent].agentId, agentName: cachedAgents[awSelectedAgent].name };
+    fbUpdate('/agentWebSettings/' + awSelectedAgent, data).then(function() {
+      var s = document.getElementById('aw-success');
+      s.textContent = 'Settings saved! Share the deposit link with your customers.';
+      s.style.display = 'block';
+      btn.textContent = '💾 Save Settings'; btn.disabled = false;
+    }).catch(function(e) {
+      showErr('aw-err', 'Error: ' + e.message);
+      btn.textContent = '💾 Save Settings'; btn.disabled = false;
+    });
+  }
+
+  // ── PENDING DEPOSITS ──
+  var pdFilter = 'all';
+
+  function loadPendingDeposits() {
+    var wrap = document.getElementById('pd-list');
+    wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading...</div>';
+    Promise.all([fbGet('/cryptoDeposits'), fbGet('/playerCryptoDeposits')]).then(function(results) {
+      var agentDeps = results[0] ? Object.entries(results[0]).map(function(e){ return Object.assign({},e[1],{_key:e[0],_type:'agent'}); }) : [];
+      var playerDeps = results[1] ? Object.entries(results[1]).map(function(e){ return Object.assign({},e[1],{_key:e[0],_type:'player'}); }) : [];
+      var all = agentDeps.concat(playerDeps).sort(function(a,b){ return new Date(b.time)-new Date(a.time); });
+      var pending = all.filter(function(d){ return d.status==='pending'; });
+      updatePendingBadge(pending.length);
+      var filtered = pdFilter==='all' ? all : all.filter(function(d){ return d.status===pdFilter; });
+      if (!filtered.length) { wrap.innerHTML='<div style="text-align:center;padding:2rem;color:#4a6ab0;">No '+pdFilter+' deposits.</div>'; return; }
+      wrap.innerHTML = filtered.map(function(d) {
+        var isAgent = d._type==='agent';
+        var who = isAgent ? ('Agent: '+(d.agentName||d.agentId)+' <span style="color:#7eb3ff;font-size:11px;">[AGENT]</span>') : ('Player: '+(d.playerName||d.playerUid)+' <span style="color:#4ade80;font-size:11px;">[PLAYER]</span>');
+        var explorerUrl = getExplorerUrl(d.coin, d.txHash);
+        return '<div class="dep-req">' +
+          '<div class="dep-req-top">' +
+            '<div><div class="dep-req-agent">'+who+'</div><div class="dep-req-time">'+new Date(d.time).toLocaleString()+'</div></div>' +
+            '<div style="text-align:right;"><div class="dep-req-amount">Rs. '+Number(d.amount).toLocaleString('en-NP')+'</div>' +
+            '<div class="dep-req-coin">'+d.coin+' ('+d.symbol+')</div>' +
+            '<span class="dep-badge-'+d.status+'">'+d.status.toUpperCase()+'</span></div>' +
+          '</div>' +
+          '<div class="dep-req-hash">TX: <a href="'+explorerUrl+'" target="_blank" style="color:#7eb3ff;">'+d.txHash+'</a><br/><span style="color:#4a6ab0;font-size:10px;">Click to verify ↗</span></div>' +
+          (d.status==='pending' ?
+            '<div class="dep-req-btns">' +
+              '<button class="btn-approve" data-key="'+d._key+'" data-amt="'+d.amount+'" data-id="'+(isAgent?d.agentId:d.playerKey)+'" data-type="'+d._type+'">Approve & Add Balance</button>' +
+              '<button class="btn-reject" data-key="'+d._key+'" data-type="'+d._type+'">✕ Reject</button>' +
+            '</div>' : '') +
+        '</div>';
+      }).join('');
+      wrap.querySelectorAll('.btn-approve').forEach(function(btn){
+        btn.addEventListener('click',function(){ approveDeposit(btn.dataset.key, parseFloat(btn.dataset.amt), btn.dataset.id, btn.dataset.type); });
+      });
+      wrap.querySelectorAll('.btn-reject').forEach(function(btn){
+        btn.addEventListener('click',function(){ rejectDeposit(btn.dataset.key, btn.dataset.type); });
+      });
+    }).catch(function(e){ wrap.innerHTML='<div style="text-align:center;padding:2rem;color:#e74c3c;">Error: '+e.message+'</div>'; });
+  }
+
+  function getExplorerUrl(coin, hash) {
+    var c = (coin || '').toLowerCase();
+    if (c.includes('bitcoin') || c.includes('btc')) return 'https://blockchair.com/bitcoin/transaction/' + hash;
+    if (c.includes('tron') || c.includes('trx') || c.includes('trc')) return 'https://tronscan.org/#/transaction/' + hash;
+    if (c.includes('bnb') || c.includes('bep')) return 'https://bscscan.com/tx/' + hash;
+    return 'https://etherscan.io/tx/' + hash;
+  }
+
+  function approveDeposit(key, amt, id, type) {
+    if (!confirm('Approve deposit of Rs. ' + Number(amt).toLocaleString('en-NP') + '?')) return;
+    if (type === 'agent') {
+      var agentKey = Object.keys(cachedAgents).find(function(k){ return cachedAgents[k].agentId === id; });
+      if (!agentKey) { alert('Agent not found!'); return; }
+      var newBal = (cachedAgents[agentKey].balance || 0) + amt;
+      fbUpdate('/agents/' + agentKey, { balance: newBal }).then(function() {
+        cachedAgents[agentKey].balance = newBal;
+        return fbUpdate('/cryptoDeposits/' + key, { status:'approved', approvedAt: new Date().toISOString() });
+      }).then(function() {
+        return fbPush('/adminTxns', { id:'TXN'+Date.now(), agentId:id, agentName:cachedAgents[agentKey].name, amount:amt, time:new Date().toISOString(), cancelled:false, type:'crypto-deposit' });
+      }).then(function(){ loadPendingDeposits(); }).catch(function(e){ alert('Error: '+e.message); });
+    } else {
+      // Player deposit - id is playerKey
+      fbGet('/players/'+id).then(function(player) {
+        if (!player) { alert('Player not found!'); return; }
+        var newBal = (player.balance || 0) + amt;
+        return fbUpdate('/players/'+id, { balance: newBal }).then(function() {
+          return fbUpdate('/playerCryptoDeposits/'+key, { status:'approved', approvedAt: new Date().toISOString() });
+        }).then(function() {
+          // Push notification to player
+          return fbPush('/notifications/'+id, {
+            msg: 'Your deposit of Rs. ' + Number(amt).toLocaleString('en-NP') + ' has been approved and added to your balance! Your new balance is Rs. ' + Number(newBal).toLocaleString('en-NP') + '.',
+            type: 'deposit',
+            time: new Date().toISOString(),
+            read: false
+          });
+        }).then(function(){ loadPendingDeposits(); });
+      }).catch(function(e){ alert('Error: '+e.message); });
+    }
+  }
+
+  function rejectDeposit(key, type) {
+    if (!confirm('Reject this deposit?')) return;
+    if (type === 'player') {
+      // Get player details first to send notification
+      fbGet('/playerCryptoDeposits/'+key).then(function(dep){
+        var playerKey = dep ? dep.playerKey : null;
+        var amt = dep ? dep.amount : 0;
+        return fbUpdate('/playerCryptoDeposits/'+key, { status:'rejected', rejectedAt: new Date().toISOString() }).then(function(){
+          if (playerKey) {
+            return fbPush('/notifications/'+playerKey, {
+              msg: 'Your deposit request of Rs. ' + Number(amt).toLocaleString('en-NP') + ' was rejected. Please contact support or try again with a valid transaction hash.',
+              type: 'rejected',
+              time: new Date().toISOString(),
+              read: false
+            });
+          }
+        });
+      }).then(function(){ loadPendingDeposits(); }).catch(function(e){ alert('Error: '+e.message); });
+    } else {
+      fbUpdate('/cryptoDeposits/'+key, { status:'rejected', rejectedAt: new Date().toISOString() }).then(function(){ loadPendingDeposits(); }).catch(function(e){ alert('Error: '+e.message); });
+    }
+  }
+
+  function updatePendingBadge(count) {
+    var badge = document.getElementById('pending-badge');
+    if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+    else { badge.style.display = 'none'; }
+    // Also update action button
+    var btn = document.getElementById('agentweb-btn');
+    if (count > 0) btn.innerHTML = '<span class="aicon">🌐</span> Agent Web <span style="background:#e74c3c;color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px;">' + count + '</span>';
+    else btn.innerHTML = '<span class="aicon">🌐</span> Agent Web';
+  }
+
+  // ── PLAYERS ──
+  var allPlayersCache = {};
+
+  function openPlayers() {
+    document.getElementById('modal-players').classList.add('open');
+    loadPlayers();
+  }
+
+  function loadPlayers() {
+    var wrap = document.getElementById('players-list');
+    wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading...</div>';
+    Promise.all([fbGet('/players'), fbGet('/agentTxns'), fbGet('/playerCryptoDeposits')]).then(function(res) {
+      var players = res[0] || {};
+      var agentTxns = res[1] || {};
+      var cryptoDeps = res[2] || {};
+      allPlayersCache = players;
+      var count = Object.keys(players).length;
+      document.getElementById('players-total').textContent = '— ' + count + ' total players';
+      // Update badge
+      var badge = document.getElementById('player-count-badge');
+      badge.textContent = count; badge.style.display = 'inline';
+      renderPlayersList(players, agentTxns, cryptoDeps, '');
+    }).catch(function(e) {
+      wrap.innerHTML = '<div style="color:#e74c3c;text-align:center;padding:2rem;">Error: ' + e.message + '</div>';
+    });
+  }
+
+  function renderPlayersList(players, agentTxns, cryptoDeps, filter) {
+    var wrap = document.getElementById('players-list');
+    var entries = Object.entries(players);
+    if (filter) {
+      var fl = filter.toLowerCase();
+      entries = entries.filter(function(e) {
+        return (e[1].username||'').toLowerCase().includes(fl) || String(e[1].uid||'').includes(fl);
+      });
+    }
+    if (!entries.length) { wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:#4a6ab0;">No players found.</div>'; return; }
+
+    var playerStats = {};
+    Object.values(agentTxns).forEach(function(t) {
+      var uid = String(t.customerUid||'');
+      if (!playerStats[uid]) playerStats[uid] = {deposited:0,withdrawn:0,agentsUsed:{}};
+      if (t.type==='deposit'){playerStats[uid].deposited+=(t.amount||0);playerStats[uid].agentsUsed[t.agentName||t.agentId]=1;}
+      if (t.type==='withdraw') playerStats[uid].withdrawn+=(t.amount||0);
+    });
+    Object.values(cryptoDeps).forEach(function(d) {
+      if (d.status!=='approved') return;
+      var uid = String(d.playerUid||'');
+      if (!playerStats[uid]) playerStats[uid]={deposited:0,withdrawn:0,agentsUsed:{}};
+      playerStats[uid].deposited+=(d.amount||0);
+    });
+
+    // Build using DOM — no string concatenation issues
+    wrap.innerHTML = '';
+    entries.forEach(function(entry) {
+      var key = entry[0], p = entry[1];
+      var uid = String(p.uid||'');
+      var st = playerStats[uid]||{deposited:0,withdrawn:0,agentsUsed:{}};
+      var agents = Object.keys(st.agentsUsed).join(', ')||'—';
+      var isBlocked = p.wdBlocked === true;
+
+      var card = document.createElement('div');
+      card.className = 'player-card';
+      card.style.marginBottom = '10px';
+
+      // Top row
+      var top = document.createElement('div');
+      top.className = 'player-card-top';
+
+      // Left: name + id
+      var left = document.createElement('div');
+      var nameDiv = document.createElement('div');
+      nameDiv.className = 'player-name';
+      nameDiv.textContent = p.username||'Unknown';
+      if (isBlocked) {
+        var badge = document.createElement('span');
+        badge.textContent = ' WD BLOCKED';
+        badge.style.cssText = 'background:#e74c3c;color:#fff;font-size:10px;padding:1px 7px;border-radius:20px;font-weight:700;margin-left:6px;';
+        nameDiv.appendChild(badge);
+      }
+      var uidDiv = document.createElement('div');
+      uidDiv.className = 'player-uid';
+      uidDiv.textContent = 'ID: ' + uid + ' | Key: ' + key;
+      left.appendChild(nameDiv);
+      left.appendChild(uidDiv);
+
+      // Right: buttons
+      var right = document.createElement('div');
+      right.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;';
+
+      // VIEW button
+      var btnView = document.createElement('button');
+      btnView.className = 'btn-view';
+      btnView.textContent = 'View';
+      btnView.addEventListener('click', function(){ viewPlayerDetail(key); });
+
+      // BLOCK / UNBLOCK button
+      var btnWd = document.createElement('button');
+      if (isBlocked) {
+        btnWd.textContent = 'Unblock WD';
+        btnWd.style.cssText = 'background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;';
+        btnWd.addEventListener('click', function(){ toggleWdBlock(key, false); });
+      } else {
+        btnWd.textContent = 'Block WD';
+        btnWd.style.cssText = 'background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;';
+        btnWd.addEventListener('click', function(){ toggleWdBlock(key, true); });
+      }
+
+      // DELETE button
+      var btnDel = document.createElement('button');
+      btnDel.className = 'btn-delete';
+      btnDel.textContent = 'Delete';
+      btnDel.addEventListener('click', function(){ deletePlayer(key, p.username||key); });
+
+      right.appendChild(btnView);
+      right.appendChild(btnWd);
+      right.appendChild(btnDel);
+      top.appendChild(left);
+      top.appendChild(right);
+
+      // Stats row
+      var stats = document.createElement('div');
+      stats.className = 'player-stats';
+      stats.innerHTML =
+        '<div class="pstat">Balance: <strong>Rs.' + Number(p.balance||0).toLocaleString('en-NP') + '</strong></div>' +
+        '<div class="pstat">Deposited: <strong>Rs.' + Number(st.deposited).toLocaleString('en-NP') + '</strong></div>' +
+        '<div class="pstat">Withdrawn: <strong>Rs.' + Number(st.withdrawn).toLocaleString('en-NP') + '</strong></div>' +
+        '<div class="pstat">Agent: <strong>' + agents + '</strong></div>';
+
+      card.appendChild(top);
+      card.appendChild(stats);
+      wrap.appendChild(card);
+    });
+  }
+
+  function viewPlayerDetail(key) {
+    var p = allPlayersCache[key];
+    if (!p) return;
+    document.getElementById('pd-detail-title').textContent = 'Player: ' + (p.username||key);
+    var body = document.getElementById('pd-detail-body');
+    body.innerHTML = '<div style="color:#4a6ab0;text-align:center;padding:1rem;">Loading...</div>';
+    document.getElementById('modal-player-detail').classList.add('open');
+
+    Promise.all([
+      fbGet('/agentTxns'),
+      fbGet('/playerTxns'),
+      fbGet('/playerCryptoDeposits'),
+      fbGet('/players/'+key+'/kyc')
+    ]).then(function(res) {
+      var agentTxns=res[0]||{}, playerTxns=res[1]||{}, cryptoDeps=res[2]||{}, kyc=res[3]||null;
+      var uid = String(p.uid||'');
+      var deps = Object.values(agentTxns).filter(function(t){return String(t.customerUid||'')===uid&&t.type==='deposit';});
+      var wds  = Object.values(agentTxns).filter(function(t){return String(t.customerUid||'')===uid&&t.type==='withdraw';});
+      var games = Object.values(playerTxns).filter(function(t){return String(t.playerKey||'')===key;}).slice(-10).reverse();
+      var cryptoList = Object.values(cryptoDeps).filter(function(d){return String(d.playerKey||'')===key;});
+      var totalDep = deps.reduce(function(s,t){return s+(t.amount||0);},0);
+      var totalWd  = wds.reduce(function(s,t){return s+(t.amount||0);},0);
+      var isBlocked = p.wdBlocked===true;
+
+      var html = '';
+
+      // ── Status bar ──
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;">';
+      html += '<span style="background:'+(isBlocked?'rgba(231,76,60,0.15)':'rgba(74,222,128,0.1)')+';color:'+(isBlocked?'#e74c3c':'#4ade80')+';border:1px solid '+(isBlocked?'rgba(231,76,60,0.4)':'rgba(74,222,128,0.3)')+';border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;">'+(isBlocked?'WD BLOCKED':'WD ACTIVE')+'</span>';
+      html += '<span style="background:rgba(126,179,255,0.1);color:#7eb3ff;border:1px solid rgba(126,179,255,0.3);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;">ID: '+uid+'</span>';
+      html += '</div>';
+
+      // ── Stats ──
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem;">';
+      html += '<div class="stat-card"><div class="sv">Rs.'+Number(p.balance||0).toLocaleString('en-NP')+'</div><div class="sl">Balance</div></div>';
+      html += '<div class="stat-card"><div class="sv" style="color:#4ade80;">Rs.'+Number(totalDep).toLocaleString('en-NP')+'</div><div class="sl">Deposited</div></div>';
+      html += '<div class="stat-card"><div class="sv" style="color:#e67e22;">Rs.'+Number(totalWd).toLocaleString('en-NP')+'</div><div class="sl">Withdrawn</div></div>';
+      html += '</div>';
+
+      // ── KYC Details ──
+      html += '<div style="font-size:12px;font-weight:700;color:#7eb3ff;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">KYC / Withdrawal Verification</div>';
+      if (kyc && kyc.name) {
+        html += '<div style="background:#060d1a;border:1px solid rgba(74,222,128,0.3);border-radius:10px;padding:12px;margin-bottom:1rem;">';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+        html += '<div><div style="font-size:10px;color:#4a6ab0;text-transform:uppercase;">Full Name</div><div style="font-size:13px;color:#fff;font-weight:600;margin-top:2px;">'+(kyc.name||'—')+'</div></div>';
+        html += '<div><div style="font-size:10px;color:#4a6ab0;text-transform:uppercase;">State</div><div style="font-size:13px;color:#fff;font-weight:600;margin-top:2px;">'+(kyc.state||'—')+'</div></div>';
+        html += '<div><div style="font-size:10px;color:#4a6ab0;text-transform:uppercase;">City</div><div style="font-size:13px;color:#fff;font-weight:600;margin-top:2px;">'+(kyc.city||'—')+'</div></div>';
+        html += '<div><div style="font-size:10px;color:#4a6ab0;text-transform:uppercase;">Gov ID</div><div style="font-size:13px;color:#fff;font-weight:600;margin-top:2px;">'+(kyc.gid||'—')+'</div></div>';
+        html += '</div>';
+        if (kyc.submittedAt) html += '<div style="font-size:10px;color:#4a6ab0;margin-top:8px;">Submitted: '+new Date(kyc.submittedAt).toLocaleString()+'</div>';
+        html += '</div>';
+      } else {
+        html += '<div style="background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.2);border-radius:8px;padding:10px 12px;font-size:13px;color:#e74c3c;margin-bottom:1rem;">KYC not submitted yet</div>';
+      }
+
+      // ── Action Buttons ──
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;">';
+      if (isBlocked) {
+        html += '<button onclick="toggleWdBlock(\''+key+'\',false)" style="padding:9px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Unblock Withdrawal</button>';
+      } else {
+        html += '<button onclick="toggleWdBlock(\''+key+'\',true)" style="padding:9px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Block Withdrawal</button>';
+      }
+      html += '<button onclick="deletePlayer(\''+key+'\',\''+(p.username||'')+'\');document.getElementById(\'modal-player-detail\').classList.remove(\'open\');" style="padding:9px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🗑 Delete Account</button>';
+      html += '</div>';
+
+      // ── Deposits ──
+      html += '<div style="font-size:12px;font-weight:700;color:#7eb3ff;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Agent Deposits ('+deps.length+')</div>';
+      if (deps.length) {
+        html += deps.map(function(t){
+          return '<div style="background:#060d1a;border-radius:8px;padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;">'+
+            '<span style="color:#c8d4f0;">'+new Date(t.time).toLocaleString()+'<br/><span style="color:#4a6ab0;">Agent: '+(t.agentName||t.agentId)+'</span></span>'+
+            '<span style="color:#4ade80;font-weight:700;">+Rs.'+Number(t.amount||0).toLocaleString('en-NP')+'</span></div>';
+        }).join('');
+      } else html += '<div style="color:#4a6ab0;font-size:13px;margin-bottom:1rem;">No agent deposits.</div>';
+
+      // ── Withdrawals ──
+      html += '<div style="font-size:12px;font-weight:700;color:#7eb3ff;text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 8px;">Withdrawals ('+wds.length+')</div>';
+      if (wds.length) {
+        html += wds.map(function(t){
+          return '<div style="background:#060d1a;border-radius:8px;padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;">'+
+            '<span style="color:#c8d4f0;">'+new Date(t.time).toLocaleString()+'</span>'+
+            '<span style="color:#e67e22;font-weight:700;">-Rs.'+Number(t.amount||0).toLocaleString('en-NP')+'</span></div>';
+        }).join('');
+      } else html += '<div style="color:#4a6ab0;font-size:13px;margin-bottom:1rem;">No withdrawals.</div>';
+
+      // ── Crypto Deposits ──
+      html += '<div style="font-size:12px;font-weight:700;color:#7eb3ff;text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 8px;">Crypto Deposits ('+cryptoList.length+')</div>';
+      if (cryptoList.length) {
+        html += cryptoList.map(function(d){
+          return '<div style="background:#060d1a;border-radius:8px;padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;">'+
+            '<span style="color:#c8d4f0;">'+new Date(d.time).toLocaleString()+'<br/><span style="color:#4a6ab0;">'+d.coin+' ('+d.symbol+')</span></span>'+
+            '<span style="color:'+(d.status==='approved'?'#4ade80':d.status==='pending'?'#f6c90e':'#e74c3c')+';font-weight:700;">'+d.status.toUpperCase()+' Rs.'+Number(d.amount||0).toLocaleString('en-NP')+'</span></div>';
+        }).join('');
+      } else html += '<div style="color:#4a6ab0;font-size:13px;margin-bottom:1rem;">No crypto deposits.</div>';
+
+      // ── Recent Games ──
+      html += '<div style="font-size:12px;font-weight:700;color:#7eb3ff;text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 8px;">Recent Games (last 10)</div>';
+      if (games.length) {
+        html += games.map(function(t){
+          return '<div style="background:#060d1a;border-radius:8px;padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;">'+
+            '<span style="color:#c8d4f0;">'+(t.game||'Game')+'<br/><span style="color:#4a6ab0;">Bet: Rs.'+Number(t.bet||0).toLocaleString('en-NP')+'</span></span>'+
+            '<span style="color:'+(t.win?'#4ade80':'#e74c3c')+';font-weight:700;">'+(t.win?'+Rs.'+Number(t.payout||0).toLocaleString('en-NP'):'-Rs.'+Number(t.bet||0).toLocaleString('en-NP'))+'</span></div>';
+        }).join('');
+      } else html += '<div style="color:#4a6ab0;font-size:13px;">No game history.</div>';
+
+      body.innerHTML = html;
+    }).catch(function(e){body.innerHTML='<div style="color:#e74c3c;">Error: '+e.message+'</div>';});
+  }
+
+  window.toggleWdBlock = function(key, block) {
+    var msg = block ? 'Block withdrawal for this player?' : 'Unblock withdrawal for this player?';
+    if (!confirm(msg)) return;
+    fbUpdate('/players/'+key, {wdBlocked: block}).then(function(){
+      if (allPlayersCache[key]) allPlayersCache[key].wdBlocked = block;
+      var notifMsg = block
+        ? 'Your withdrawal has been blocked by the security department. Please contact your agent to resolve.'
+        : 'Your withdrawal has been unblocked. You can now withdraw funds.';
+      fbPush('/notifications/'+key, {msg:notifMsg, type:block?'rejected':'deposit', time:new Date().toISOString(), read:false});
+      alert((block ? 'Withdrawal blocked' : 'Withdrawal unblocked') + ' for this player.');
+      loadPlayers();
+    }).catch(function(e){alert('Error: '+e.message);});
+  };
+
+  function deletePlayer(key, username) {
+    if (!confirm('Delete player "' + username + '"?\n\nThis will permanently delete their account, balance, and all data. Cannot be undone!')) return;
+    fetch(FB + '/players/' + key + '.json', {method:'DELETE'}).then(function() {
+      delete allPlayersCache[key];
+      loadPlayers();
+      alert('Player "' + username + '" deleted.');
+    }).catch(function(e){alert('Error: '+e.message);});
+  }
+
+  // ── DELETE AGENT ──
+  function deleteAgent(key, name) {
+    if (!confirm('Delete agent "' + name + '"?\n\nThis will also delete their crypto settings. Cannot be undone!')) return;
+    Promise.all([
+      fetch(FB + '/agents/' + key + '.json', {method:'DELETE'}),
+      fetch(FB + '/agentWebSettings/' + key + '.json', {method:'DELETE'})
+    ]).then(function() {
+      delete cachedAgents[key];
+      loadAll();
+      alert('Agent "' + name + '" deleted.');
+    }).catch(function(e){alert('Error: '+e.message);});
+  }
+
+  // Expose all functions that are called via onclick in innerHTML
+  window._vpd = function(k){ viewPlayerDetail(k); };
+  window._dp = function(k,u){ deletePlayer(k,u); };
+  window._twdb = function(k,b){ toggleWdBlock(k,b); };
+  window.viewPlayerDetail = viewPlayerDetail;
+  window.deletePlayer = deletePlayer;
+
+  // ── DEPOSIT CONTACTS ──
+  var editingContactKey = null;
+  function openContacts() {
+    document.getElementById('modal-contacts').classList.add('open');
+    loadContacts();
+  }
+  function loadContacts() {
+    var wrap = document.getElementById('ct-list');
+    wrap.innerHTML = '<div style="text-align:center;padding:1rem;color:#4a6ab0;">Loading...</div>';
+    fbGet('/adminContacts').then(function(data){
+      if(!data||!Object.keys(data).length){wrap.innerHTML='<div style="text-align:center;padding:1rem;color:#4a6ab0;">No contacts yet. Add one above!</div>';return;}
+      var entries=Object.entries(data);
+      wrap.innerHTML='';
+      entries.forEach(function(e){
+        var key=e[0],c=e[1];
+        var icon=c.type==='telegram'?'✈️':c.type==='whatsapp'?'📱':'🔗';
+        var color=c.type==='telegram'?'#2aa3ef':c.type==='whatsapp'?'#25d366':'#1a3a7c';
+        var row=document.createElement('div');
+        row.style.cssText='background:#060d1a;border:1px solid #1a3a7c;border-radius:10px;padding:12px 14px;margin-bottom:8px;';
+        row.innerHTML=
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'+
+            '<div style="width:36px;height:36px;border-radius:50%;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">'+icon+'</div>'+
+            '<div style="flex:1;">'+
+              '<div style="font-size:13px;font-weight:700;color:#fff;">'+(c.name||'Agent')+'</div>'+
+              '<div style="font-size:11px;color:'+color+';margin-top:2px;">'+(c.type||'contact')+(c.username?' · @'+c.username:'')+'</div>'+
+              '<div style="font-size:11px;color:#4a6ab0;margin-top:2px;word-break:break-all;">'+(c.link||'')+'</div>'+
+              (c.note?'<div style="font-size:11px;color:#4a6ab0;margin-top:2px;">'+c.note+'</div>':'')+
+            '</div>'+
+            '<span style="background:'+(c.active!==false?'rgba(74,222,128,0.1)':'rgba(231,76,60,0.1)')+';color:'+(c.active!==false?'#4ade80':'#e74c3c')+';border:1px solid '+(c.active!==false?'rgba(74,222,128,0.3)':'rgba(231,76,60,0.3)')+';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;flex-shrink:0;">'+(c.active!==false?'ACTIVE':'HIDDEN')+'</span>'+
+          '</div>'+
+          '<div style="display:flex;gap:6px;">'+
+            '<button onclick="editContact(\''+key+'\')" style="flex:1;padding:6px;background:rgba(126,179,255,0.1);color:#7eb3ff;border:1px solid rgba(126,179,255,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">✏ Edit</button>'+
+            '<button onclick="toggleContact(\''+key+'\','+(c.active!==false?'false':'true')+')" style="flex:1;padding:6px;background:rgba(246,201,0,0.1);color:#f6c90e;border:1px solid rgba(246,201,0,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">'+(c.active!==false?'Hide':'Show')+'</button>'+
+            '<button onclick="deleteContact(\''+key+'\')" style="flex:1;padding:6px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Delete</button>'+
+          '</div>';
+        wrap.appendChild(row);
+      });
+    }).catch(function(e){wrap.innerHTML='<div style="color:#e74c3c;">Error: '+e.message+'</div>';});
+  }
+
+  window.editContact=function(key){
+    fbGet('/adminContacts/'+key).then(function(c){
+      if(!c)return;
+      editingContactKey=key;
+      document.getElementById('ct-form-title').textContent='Edit Contact';
+      document.getElementById('ct-type').value=c.type||'telegram';
+      document.getElementById('ct-name').value=c.name||'';
+      document.getElementById('ct-link').value=c.link||'';
+      document.getElementById('ct-username').value=c.username||'';
+      document.getElementById('ct-note').value=c.note||'';
+      document.getElementById('ct-save-btn').textContent='Update Contact';
+      document.getElementById('ct-cancel-btn').style.display='block';
+    });
+  };
+  window.toggleContact=function(key,active){
+    fbUpdate('/adminContacts/'+key,{active:active}).then(function(){loadContacts();});
+  };
+  window.deleteContact=function(key){
+    if(!confirm('Delete this contact?'))return;
+    fetch(FB+'/adminContacts/'+key+'.json',{method:'DELETE'}).then(function(){loadContacts();});
+  };
+
+  document.getElementById('ct-cancel-btn').addEventListener('click',function(){
+    editingContactKey=null;
+    document.getElementById('ct-form-title').textContent='Add New Contact';
+    document.getElementById('ct-save-btn').textContent='Add Contact';
+    document.getElementById('ct-cancel-btn').style.display='none';
+    ['ct-name','ct-link','ct-username','ct-note'].forEach(function(id){document.getElementById(id).value='';});
+  });
+  document.getElementById('ct-save-btn').addEventListener('click',function(){
+    var type=document.getElementById('ct-type').value;
+    var name=document.getElementById('ct-name').value.trim();
+    var link=document.getElementById('ct-link').value.trim();
+    var username=document.getElementById('ct-username').value.trim();
+    var note=document.getElementById('ct-note').value.trim();
+    var errEl=document.getElementById('ct-err');errEl.style.display='none';
+    if(!name){errEl.textContent='Please enter a display name.';errEl.style.display='block';return;}
+    if(!link){errEl.textContent='Please enter the link/URL.';errEl.style.display='block';return;}
+    var data={type:type,name:name,link:link,username:username,note:note,active:true,createdAt:new Date().toISOString()};
+    var btn=document.getElementById('ct-save-btn');btn.textContent='Saving...';btn.disabled=true;
+    var promise=editingContactKey?fbUpdate('/adminContacts/'+editingContactKey,data):fbPush('/adminContacts',data);
+    promise.then(function(){
+      btn.textContent=editingContactKey?'Update Contact':'Add Contact';btn.disabled=false;
+      editingContactKey=null;
+      document.getElementById('ct-form-title').textContent='Add New Contact';
+      document.getElementById('ct-cancel-btn').style.display='none';
+      ['ct-name','ct-link','ct-username','ct-note'].forEach(function(id){document.getElementById(id).value='';});
+      loadContacts();
+    }).catch(function(e){errEl.textContent='Error: '+e.message;errEl.style.display='block';btn.textContent='Add Contact';btn.disabled=false;});
+  });
+
+  // ── SPORT EVENTS ──
+  var editingEventKey = null;
+
+  function openSportEvents() {
+    document.getElementById('modal-sportevents').classList.add('open');
+    loadSportEvents();
+  }
+
+  function loadSportEvents() {
+    var wrap = document.getElementById('se-list');
+    wrap.innerHTML = '<div style="text-align:center;padding:1rem;color:#4a6ab0;">Loading...</div>';
+    fbGet('/sportEvents').then(function(data){
+      if (!data || !Object.keys(data).length) {
+        wrap.innerHTML = '<div style="text-align:center;padding:1rem;color:#4a6ab0;">No events added yet. Add one above!</div>';
+        return;
+      }
+      var entries = Object.entries(data).sort(function(a,b){return new Date(b[1].createdAt||0)-new Date(a[1].createdAt||0);});
+      wrap.innerHTML = entries.map(function(e){
+        var ev=e[1],key=e[0];
+        var o=ev.odds||{};
+        return '<div style="background:#060d1a;border:1px solid #1a3a7c;border-radius:10px;padding:12px 14px;margin-bottom:8px;">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'+
+            '<div>'+
+              '<div style="font-size:13px;font-weight:700;color:#fff;">'+(ev.team1||'')+'<span style="color:#4a6ab0;font-size:12px;margin:0 6px;">vs</span>'+(ev.team2||'')+'</div>'+
+              '<div style="font-size:11px;color:#4a6ab0;margin-top:2px;">'+(ev.sport||'')+' · '+(ev.league||'')+'</div>'+
+            '</div>'+
+            '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'+
+              (ev.live?'<span style="background:#e74c3c;color:#fff;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">LIVE</span>':'')+
+              '<span style="background:'+(ev.active!==false?'rgba(74,222,128,0.1)':'rgba(231,76,60,0.1)')+';color:'+(ev.active!==false?'#4ade80':'#e74c3c')+';border:1px solid '+(ev.active!==false?'rgba(74,222,128,0.3)':'rgba(231,76,60,0.3)')+';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">'+(ev.active!==false?'ACTIVE':'HIDDEN')+'</span>'+
+            '</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'+
+            '<span style="background:#1a3a7c;color:#7eb3ff;border-radius:6px;padding:3px 10px;font-size:12px;">H: '+(o.h||'—')+'</span>'+
+            (ev.type!=='2way'?'<span style="background:#1a3a7c;color:#7eb3ff;border-radius:6px;padding:3px 10px;font-size:12px;">D: '+(o.d||'—')+'</span>':'')+
+            '<span style="background:#1a3a7c;color:#7eb3ff;border-radius:6px;padding:3px 10px;font-size:12px;">A: '+(o.a||'—')+'</span>'+
+          '</div>'+
+          '<div style="display:flex;gap:6px;">'+
+            '<button onclick="editSportEvent(\''+key+'\')" style="flex:1;padding:6px;background:rgba(126,179,255,0.1);color:#7eb3ff;border:1px solid rgba(126,179,255,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">✏ Edit</button>'+
+            '<button onclick="toggleEventActive(\''+key+'\','+(ev.active!==false?'false':'true')+')" style="flex:1;padding:6px;background:rgba(246,201,0,0.1);color:#f6c90e;border:1px solid rgba(246,201,0,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">'+(ev.active!==false?'Hide':'Show')+'</button>'+
+            '<button onclick="deleteSportEvent(\''+key+'\')" style="flex:1;padding:6px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Delete</button>'+
+          '</div>'+
+        '</div>';
+      }).join('');
+    }).catch(function(e){wrap.innerHTML='<div style="color:#e74c3c;">Error: '+e.message+'</div>';});
+  }
+
+  window.editSportEvent = function(key) {
+    fbGet('/sportEvents/'+key).then(function(ev){
+      if(!ev)return;
+      editingEventKey = key;
+      document.getElementById('se-form-title').textContent = 'Edit Event';
+      document.getElementById('se-sport').value = ev.sport||'Football';
+      document.getElementById('se-league').value = ev.league||'';
+      document.getElementById('se-t1').value = ev.team1||'';
+      document.getElementById('se-t2').value = ev.team2||'';
+      document.getElementById('se-oh').value = (ev.odds&&ev.odds.h)||'';
+      document.getElementById('se-od').value = (ev.odds&&ev.odds.d)||'';
+      document.getElementById('se-oa').value = (ev.odds&&ev.odds.a)||'';
+      document.getElementById('se-type').value = ev.type||'';
+      document.getElementById('se-live').checked = !!ev.live;
+      document.getElementById('se-active').checked = ev.active!==false;
+      document.getElementById('se-save-btn').textContent = 'Update Event';
+      document.getElementById('se-cancel-btn').style.display = 'block';
+    });
+  };
+
+  window.toggleEventActive = function(key, active) {
+    fbUpdate('/sportEvents/'+key, {active:active}).then(function(){loadSportEvents();});
+  };
+
+  window.deleteSportEvent = function(key) {
+    if(!confirm('Delete this sport event?'))return;
+    fetch(FB+'/sportEvents/'+key+'.json',{method:'DELETE'}).then(function(){loadSportEvents();});
+  };
+
+  document.getElementById('se-cancel-btn').addEventListener('click', function(){
+    editingEventKey=null;
+    document.getElementById('se-form-title').textContent='Add New Event';
+    document.getElementById('se-save-btn').textContent='Save Event';
+    document.getElementById('se-cancel-btn').style.display='none';
+    ['se-league','se-t1','se-t2','se-oh','se-od','se-oa'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('se-live').checked=false;
+    document.getElementById('se-active').checked=true;
+  });
+
+  document.getElementById('se-save-btn').addEventListener('click', function(){
+    var sport=document.getElementById('se-sport').value;
+    var league=document.getElementById('se-league').value.trim();
+    var t1=document.getElementById('se-t1').value.trim();
+    var t2=document.getElementById('se-t2').value.trim();
+    var oh=parseFloat(document.getElementById('se-oh').value)||0;
+    var od=parseFloat(document.getElementById('se-od').value)||0;
+    var oa=parseFloat(document.getElementById('se-oa').value)||0;
+    var type=document.getElementById('se-type').value;
+    var live=document.getElementById('se-live').checked;
+    var active=document.getElementById('se-active').checked;
+    var errEl=document.getElementById('se-err');errEl.style.display='none';
+    if(!league||!t1||!t2){errEl.textContent='Please fill Team 1, Team 2, and League.';errEl.style.display='block';return;}
+    if(!oh||!oa){errEl.textContent='Please fill Home and Away odds.';errEl.style.display='block';return;}
+    var data={sport:sport,league:league,team1:t1,team2:t2,odds:{h:oh,d:od||0,a:oa},type:type||null,live:live,active:active,createdAt:new Date().toISOString()};
+    var btn=document.getElementById('se-save-btn');btn.textContent='Saving...';btn.disabled=true;
+    var promise=editingEventKey?fbUpdate('/sportEvents/'+editingEventKey,data):fbPush('/sportEvents',data);
+    promise.then(function(){
+      btn.textContent=editingEventKey?'Update Event':'Save Event';btn.disabled=false;
+      editingEventKey=null;
+      document.getElementById('se-form-title').textContent='Add New Event';
+      document.getElementById('se-cancel-btn').style.display='none';
+      ['se-league','se-t1','se-t2','se-oh','se-od','se-oa'].forEach(function(id){document.getElementById(id).value='';});
+      document.getElementById('se-live').checked=false;
+      loadSportEvents();
+    }).catch(function(e){errEl.textContent='Error: '+e.message;errEl.style.display='block';btn.textContent=editingEventKey?'Update Event':'Save Event';btn.disabled=false;});
+  });
+
+  // ── SPORT BETS ──
+  var sbFilter = 'pending';
+  function openSportBets() {
+    document.getElementById('modal-sportbets').classList.add('open');
+    loadSportBets();
+  }
+  function loadSportBets() {
+    var wrap = document.getElementById('sportbets-list');
+    wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading...</div>';
+    fbGet('/sportBets').then(function(data) {
+      if (!data || !Object.keys(data).length) {
+        wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:#4a6ab0;">No sport bets yet.</div>';
+        document.getElementById('sportbets-total').textContent = '';
+        document.getElementById('sportbets-badge').style.display = 'none'; return;
+      }
+      var entries = Object.entries(data).sort(function(a,b){return new Date(b[1].time)-new Date(a[1].time);});
+      var pending = entries.filter(function(e){return !e[1].settled;}).length;
+      document.getElementById('sportbets-total').textContent = '— '+entries.length+' total, '+pending+' pending';
+      if (pending > 0) { document.getElementById('sportbets-badge').textContent = pending; document.getElementById('sportbets-badge').style.display = 'inline'; }
+      else document.getElementById('sportbets-badge').style.display = 'none';
+      var filtered = sbFilter === 'all' ? entries : entries.filter(function(e) {
+        var s = e[1].status||'pending';
+        return s === sbFilter;
+      });
+      if (!filtered.length) { wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:#4a6ab0;">No '+sbFilter+' bets.</div>'; return; }
+      wrap.innerHTML = '';
+      filtered.forEach(function(entry) {
+        var key = entry[0], b = entry[1];
+        var status = b.status || 'pending';
+        var statusClr = status==='won'?'#4ade80':status==='lost'?'#e74c3c':'#f6c90e';
+        var row = document.createElement('div');
+        row.style.cssText = 'background:#060d1a;border:1px solid #1a3a7c;border-radius:10px;padding:12px 14px;margin-bottom:8px;';
+        row.innerHTML =
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'+
+            '<div>'+
+              '<div style="font-size:13px;font-weight:700;color:#fff;">'+b.event+'</div>'+
+              '<div style="font-size:11px;color:#4a6ab0;margin-top:2px;">'+b.playerName+' ('+b.playerUid+') · '+b.league+'</div>'+
+              '<div style="font-size:12px;color:#7eb3ff;margin-top:4px;">Pick: <strong>'+b.selection+'</strong> @ <strong>'+Number(b.odds).toFixed(2)+'x</strong></div>'+
+              '<div style="font-size:12px;color:#4a6ab0;margin-top:2px;">Bet: <strong style="color:#fff;">'+fmt(b.bet)+'</strong> | Potential win: <strong style="color:#4ade80;">'+fmt(b.potentialPayout||Math.floor(b.bet*b.odds))+'</strong></div>'+
+              '<div style="font-size:10px;color:#4a6ab0;margin-top:2px;">'+new Date(b.time).toLocaleString()+'</div>'+
+            '</div>'+
+            '<div style="text-align:right;flex-shrink:0;">'+
+              '<span style="background:rgba(255,255,255,0.05);color:'+statusClr+';border:1px solid '+statusClr+';border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;">'+status.toUpperCase()+'</span>'+
+            '</div>'+
+          '</div>'+
+          (status==='pending'?
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'+
+              '<button onclick="settleSportBet(\''+key+'\',\'won\','+b.bet+','+(b.potentialPayout||Math.floor(b.bet*b.odds))+',\''+b.playerKey+'\')" style="padding:8px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Mark Won</button>'+
+              '<button onclick="settleSportBet(\''+key+'\',\'lost\','+b.bet+',0,\''+b.playerKey+'\')" style="padding:8px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Mark Lost</button>'+
+              '<button onclick="deleteSportBet(\''+key+'\')" style="padding:8px;background:rgba(100,100,100,0.1);color:#4a6ab0;border:1px solid #1a3a7c;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Delete</button>'+
+            '</div>':
+            '<button onclick="deleteSportBet(\''+key+'\')" style="padding:6px 14px;background:rgba(100,100,100,0.1);color:#4a6ab0;border:1px solid #1a3a7c;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">Delete</button>'
+          );
+        wrap.appendChild(row);
+      });
+    }).catch(function(e){wrap.innerHTML='<div style="color:#e74c3c;text-align:center;padding:2rem;">Error: '+e.message+'</div>';});
+  }
+
+  window.settleSportBet = function(key, result, bet, payout, playerKey) {
+    var msg = result==='won'
+      ? 'Mark WON? Rs.'+Number(payout).toLocaleString('en-NP')+' will be credited to player.'
+      : 'Mark LOST? Player will be notified. (Bet was already deducted when placed.)';
+    if (!confirm(msg)) return;
+    var updates = {
+      status: result,
+      settled: true,
+      settledAt: new Date().toISOString(),
+      finalPayout: result==='won' ? payout : 0,
+      won: result==='won'
+    };
+    fbUpdate('/sportBets/'+key, updates).then(function(){
+      if (result === 'won') {
+        return fbGet('/players/'+playerKey).then(function(player){
+          if (!player) return;
+          var newBal = (Number(player.balance)||0) + payout;
+          return fbUpdate('/players/'+playerKey, {balance: newBal}).then(function(){
+            return fbPush('/notifications/'+playerKey, {
+              msg: 'Sport bet WON! Rs.'+Number(payout).toLocaleString('en-NP')+' added to your balance!',
+              type: 'deposit', time: new Date().toISOString(), read: false
+            });
+          });
+        });
+      } else {
+        return fbPush('/notifications/'+playerKey, {
+          msg: 'Sport bet lost. Rs.'+Number(bet).toLocaleString('en-NP')+' was already deducted when you placed the bet. Better luck next time!',
+          type: 'rejected', time: new Date().toISOString(), read: false
+        });
+      }
+    }).then(function(){
+      alert(result==='won' ? 'WON — Rs.'+Number(payout).toLocaleString('en-NP')+' credited!' : 'LOST — Player notified.');
+      loadSportBets();
+    }).catch(function(e){ alert('Error: '+e.message); });
+  };
+
+  window.deleteSportBet = function(key) {
+    if (!confirm('Delete this bet record?')) return;
+    fbDel('/sportBets/'+key).then(function(){ loadSportBets(); }).catch(function(e){ alert('Error: '+e.message); });
+  };
+
+  // ── ISSUES ──
+  function openIssues(){
+    document.getElementById('modal-issues').classList.add('open');
+    loadIssues();
+  }
+
+  function loadIssues(){
+    var wrap=document.getElementById('issues-list');
+    wrap.innerHTML='<div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading...</div>';
+    fbGet('/support').then(function(data){
+      if(!data||!Object.keys(data).length){
+        wrap.innerHTML='<div style="text-align:center;padding:2rem;color:#4a6ab0;">No support issues yet.</div>';
+        document.getElementById('issues-total').textContent='';
+        document.getElementById('issues-badge').style.display='none';
+        return;
+      }
+      var playerKeys=Object.keys(data);
+      document.getElementById('issues-total').textContent='— '+playerKeys.length+' open';
+      document.getElementById('issues-badge').textContent=playerKeys.length;
+      document.getElementById('issues-badge').style.display='inline';
+      wrap.innerHTML='';
+
+      playerKeys.forEach(function(pk){
+        var msgs=data[pk];
+        if(!msgs)return;
+        var entries=Object.entries(msgs).sort(function(a,b){return new Date(a[1].time)-new Date(b[1].time);});
+        if(!entries.length)return;
+        var lastMsg=entries[entries.length-1][1];
+        var playerName=lastMsg.playerName||'Unknown Player';
+        var playerUid=lastMsg.playerUid||pk;
+        var msgCount=entries.length;
+        var preview=(lastMsg.msg||'').substring(0,60)+(lastMsg.msg&&lastMsg.msg.length>60?'...':'');
+
+        var row=document.createElement('div');
+        row.style.cssText='background:#060d1a;border:1px solid #1a3a7c;border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+        row.innerHTML=
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'+
+              '<span style="font-size:14px;font-weight:700;color:#fff;">'+playerName+'</span>'+
+              '<span style="font-size:11px;background:#1a3a7c;color:#7eb3ff;border-radius:20px;padding:1px 8px;">ID: '+playerUid+'</span>'+
+            '</div>'+
+            '<div style="font-size:12px;color:#4a6ab0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+preview+'</div>'+
+            '<div style="font-size:10px;color:#4a6ab0;margin-top:3px;">'+new Date(lastMsg.time).toLocaleString()+'</div>'+
+          '</div>'+
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">'+
+            '<span style="background:#e74c3c;color:#fff;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;">'+msgCount+' msgs</span>'+
+            '<button class="issue-del-btn" data-pk="'+pk+'" style="background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">Delete</button>'+
+          '</div>';
+        row.addEventListener('mouseenter',function(){row.style.borderColor='#3b7dd8';row.style.background='#0a1830';});
+        row.addEventListener('mouseleave',function(){row.style.borderColor='#1a3a7c';row.style.background='#060d1a';});
+        row.addEventListener('click',function(e){
+          if(e.target.classList.contains('issue-del-btn'))return;
+          openIssueDetail(pk,playerName,playerUid,entries);
+        });
+        row.querySelector('.issue-del-btn').addEventListener('click',function(e){
+          e.stopPropagation();deleteIssue(pk);
+        });
+        wrap.appendChild(row);
+      });
+    }).catch(function(e){
+      wrap.innerHTML='<div style="color:#e74c3c;text-align:center;padding:2rem;">Error loading: '+e.message+'</div>';
+    });
+  }
+
+  function openIssueDetail(pk,playerName,playerUid,entries){
+    var wrap=document.getElementById('issues-list');
+    var msgsHtml=entries.map(function(e){
+      var m=e[1];
+      var isAdmin=m.sender==='admin';
+      var align=isAdmin?'flex-start':'flex-end';
+      var bg=isAdmin?'#1a3a7c':'#0d2460';
+      var nameLabel=isAdmin?'<div style="font-size:10px;color:#7eb3ff;font-weight:700;margin-bottom:3px;">SUPPORT</div>':'<div style="font-size:10px;color:#4ade80;font-weight:700;margin-bottom:3px;">'+playerName+'</div>';
+      return '<div style="display:flex;flex-direction:column;align-items:'+align+';margin-bottom:12px;">'+
+        nameLabel+
+        '<div style="max-width:78%;background:'+bg+';border-radius:8px;padding:9px 13px;font-size:13px;color:#e0e8ff;line-height:1.5;">'+m.msg+'</div>'+
+        '<div style="font-size:10px;color:#4a6ab0;margin-top:3px;">'+new Date(m.time).toLocaleString()+'</div>'+
+      '</div>';
+    }).join('');
+
+    wrap.innerHTML=
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #1a3a7c;">'+
+        '<button id="issue-back-btn" style="background:#060d1a;border:1px solid #1a3a7c;border-radius:7px;padding:6px 14px;font-size:12px;color:#7eb3ff;cursor:pointer;font-weight:700;">← Back</button>'+
+        '<div style="flex:1;">'+
+          '<div style="font-size:15px;font-weight:700;color:#fff;">'+playerName+'</div>'+
+          '<div style="font-size:11px;color:#4a6ab0;">Player ID: '+playerUid+'</div>'+
+        '</div>'+
+        '<button id="issue-del-detail-btn" style="background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:7px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Delete Issue</button>'+
+      '</div>'+
+      '<div id="issue-msgs-wrap" style="max-height:300px;overflow-y:auto;border:1px solid #1a3a7c;border-radius:10px;padding:14px;background:#0a1525;margin-bottom:12px;">'+
+        msgsHtml+
+      '</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<input type="text" id="issue-reply-inp" placeholder="Type your reply to '+playerName+'..." style="flex:1;padding:10px 14px;border-radius:8px;border:1px solid #1a3a7c;background:#060d1a;font-size:13px;color:#e0e8ff;outline:none;"/>'+
+        '<button id="issue-reply-btn" style="padding:10px 20px;background:#1a3a7c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Send Reply</button>'+
+      '</div>';
+
+    // Scroll chat to bottom
+    setTimeout(function(){var w=document.getElementById('issue-msgs-wrap');if(w)w.scrollTop=w.scrollHeight;},60);
+
+    document.getElementById('issue-back-btn').addEventListener('click',loadIssues);
+    document.getElementById('issue-del-detail-btn').addEventListener('click',function(){deleteIssue(pk);});
+
+    function sendReply(){
+      var inp=document.getElementById('issue-reply-inp');
+      var btn=document.getElementById('issue-reply-btn');
+      var msg=inp.value.trim();if(!msg)return;
+      btn.textContent='Sending...';btn.disabled=true;
+      fbPush('/support/'+pk,{msg:msg,sender:'admin',time:new Date().toISOString()}).then(function(){
+        return fbPush('/notifications/'+pk,{msg:'Support: '+msg,type:'admin',time:new Date().toISOString(),read:false});
+      }).then(function(){
+        inp.value='';
+        // Reload this conversation
+        fbGet('/support/'+pk).then(function(data){
+          if(!data)return;
+          var newEntries=Object.entries(data).sort(function(a,b){return new Date(a[1].time)-new Date(b[1].time);});
+          openIssueDetail(pk,playerName,playerUid,newEntries);
+        });
+      }).catch(function(e){alert('Error: '+e.message);btn.textContent='Send Reply';btn.disabled=false;});
+    }
+
+    document.getElementById('issue-reply-btn').addEventListener('click',sendReply);
+    document.getElementById('issue-reply-inp').addEventListener('keydown',function(e){if(e.key==='Enter')sendReply();});
+  }
+
+    window.deleteIssue=function(pk){
+    if(!confirm('Delete all messages from this player? This cannot be undone.'))return;
+    fetch(FB+'/support/'+pk+'.json',{method:'DELETE'}).then(function(){loadIssues();}).catch(function(e){alert('Error: '+e.message);});
+  };
+
+  // Check issues count on load
+  function checkIssuesCount(){
+    fbGet('/support').then(function(data){
+      if(!data)return;
+      var count=Object.keys(data).length;
+      if(count>0){document.getElementById('issues-badge').textContent=count;document.getElementById('issues-badge').style.display='inline';}
+      else{document.getElementById('issues-badge').style.display='none';}
+    }).catch(function(){});
+  }
+
+  // ── SEND MESSAGE ──
+  function openSendMsg(){
+    document.getElementById('sendmsg-err').style.display='none';
+    document.getElementById('sendmsg-suc').style.display='none';
+    document.getElementById('sendmsg-text').value='';
+    // Populate player list
+    var sel=document.getElementById('sendmsg-target');
+    sel.innerHTML='<option value="all">All Players</option>';
+    fbGet('/players').then(function(players){
+      if(!players)return;
+      Object.entries(players).forEach(function(e){
+        var opt=document.createElement('option');
+        opt.value=e[0];
+        opt.textContent=e[1].username+' ('+e[1].uid+')';
+        sel.appendChild(opt);
+      });
+    });
+    loadSentMessages();
+    document.getElementById('modal-sendmsg').classList.add('open');
+  }
+
+  function loadSentMessages(){
+    var wrap=document.getElementById('sent-msgs-list');
+    wrap.innerHTML='<div style="color:#4a6ab0;font-size:13px;">Loading...</div>';
+    fbGet('/adminMessages').then(function(msgs){
+      if(!msgs||!Object.keys(msgs).length){wrap.innerHTML='<div style="color:#4a6ab0;font-size:13px;">No messages sent yet.</div>';return;}
+      var entries=Object.entries(msgs).sort(function(a,b){return new Date(b[1].time)-new Date(a[1].time);});
+      wrap.innerHTML=entries.map(function(e){
+        var m=e[1],key=e[0];
+        return '<div style="background:#060d1a;border:1px solid #1a3a7c;border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'+
+          '<div style="flex:1;">'+
+            '<div style="font-size:13px;color:#e0e8ff;">'+m.msg+'</div>'+
+            '<div style="font-size:11px;color:#4a6ab0;margin-top:4px;">'+new Date(m.time).toLocaleString()+' &nbsp;·&nbsp; To: '+(m.target==='all'?'All Players':m.targetName||m.target)+'</div>'+
+          '</div>'+
+          '<button onclick="deleteAdminMsg(\''+key+'\')" style="background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Delete</button>'+
+        '</div>';
+      }).join('');
+    }).catch(function(e){wrap.innerHTML='<div style="color:#e74c3c;font-size:13px;">Error: '+e.message+'</div>';});
+  }
+
+  window.deleteAdminMsg=function(key){
+    if(!confirm('Delete this message?'))return;
+    fetch(FB+'/adminMessages/'+key+'.json',{method:'DELETE'}).then(function(){
+      loadSentMessages();
+    }).catch(function(e){alert('Error: '+e.message);});
+  };
+
+  function sendMessage(){
+    var msg=document.getElementById('sendmsg-text').value.trim();
+    var target=document.getElementById('sendmsg-target').value;
+    var targetName=document.getElementById('sendmsg-target').options[document.getElementById('sendmsg-target').selectedIndex].textContent;
+    var errEl=document.getElementById('sendmsg-err');
+    errEl.style.display='none';
+    if(!msg){errEl.textContent='Please type a message.';errEl.style.display='block';return;}
+    var btn=document.getElementById('sendmsg-btn');btn.textContent='Sending...';btn.disabled=true;
+    // Save message record to admin
+    var msgRecord={msg:msg,target:target,targetName:targetName,time:new Date().toISOString()};
+    fbPush('/adminMessages',msgRecord).then(function(){
+      // Push notification to players
+      return fbGet('/players');
+    }).then(function(players){
+      if(!players)return;
+      var targets=[];
+      if(target==='all'){targets=Object.keys(players);}
+      else{if(players[target])targets=[target];}
+      var notifData={msg:'Admin: '+msg,type:'admin',time:new Date().toISOString(),read:false};
+      return Promise.all(targets.map(function(pk){return fbPush('/notifications/'+pk,notifData);}));
+    }).then(function(){
+      var suc=document.getElementById('sendmsg-suc');
+      suc.textContent='Message sent to '+(target==='all'?'all players':targetName)+' successfully!';
+      suc.style.display='block';
+      document.getElementById('sendmsg-text').value='';
+      btn.textContent='Send to All Players';btn.disabled=false;
+      loadSentMessages();
+    }).catch(function(e){
+      errEl.textContent='Error: '+e.message;errEl.style.display='block';
+      btn.textContent='Send to All Players';btn.disabled=false;
+    });
+  }
+
+  // Also push notification when admin approves deposit/withdrawal
+  var _origApproveDeposit=approveDeposit;
+  window.approveDeposit=function(key,amt,id,type){
+    _origApproveDeposit(key,amt,id,type);
+    // Push notification to player if player deposit
+    if(type==='player'){
+      fbGet('/playerCryptoDeposits/'+key).then(function(dep){
+        if(!dep||!dep.playerKey)return;
+        fbPush('/notifications/'+dep.playerKey,{
+          msg:'Deposit of Rs. '+Number(amt).toLocaleString('en-NP')+' has been approved and added to your balance!',
+          type:'deposit',time:new Date().toISOString(),read:false
+        });
+      }).catch(function(){});
+    }
+  };
+
+  // ── WIRE UP NEW BUTTONS ──
+  document.getElementById('issues-btn').addEventListener('click',openIssues);
+  document.getElementById('issues-close').addEventListener('click',function(){document.getElementById('modal-issues').classList.remove('open');});
+  document.getElementById('contacts-btn').addEventListener('click', openContacts);
+  document.getElementById('contacts-close').addEventListener('click', function(){ document.getElementById('modal-contacts').classList.remove('open'); });
+  document.getElementById('sportevents-btn').addEventListener('click', openSportEvents);
+  document.getElementById('sportevents-close').addEventListener('click', function(){ document.getElementById('modal-sportevents').classList.remove('open'); });
+  document.getElementById('sportbets-btn').addEventListener('click', openSportBets);
+  document.getElementById('sportbets-close').addEventListener('click', function(){ document.getElementById('modal-sportbets').classList.remove('open'); });
+  document.getElementById('sportbets-refresh').addEventListener('click', loadSportBets);
+  document.querySelectorAll('.sb-filter-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.sb-filter-btn').forEach(function(b){b.classList.remove('active');});
+      btn.classList.add('active');sbFilter=btn.dataset.f;loadSportBets();
+    });
+  });
+  document.getElementById('send-msg-btn').addEventListener('click',openSendMsg);
+  document.getElementById('sendmsg-close').addEventListener('click',function(){document.getElementById('modal-sendmsg').classList.remove('open');});
+  document.getElementById('sendmsg-btn').addEventListener('click',sendMessage);
+  document.getElementById('refresh-msgs-btn').addEventListener('click',loadSentMessages);
+  document.getElementById('players-btn').addEventListener('click', openPlayers);
+  document.getElementById('players-close-btn').addEventListener('click', function(){ document.getElementById('modal-players').classList.remove('open'); });
+  document.getElementById('pd-detail-close').addEventListener('click', function(){ document.getElementById('modal-player-detail').classList.remove('open'); });
+  document.getElementById('player-search-btn').addEventListener('click', function(){
+    var q = document.getElementById('player-search-inp').value.trim();
+    Promise.all([fbGet('/agentTxns'), fbGet('/playerCryptoDeposits')]).then(function(res){
+      renderPlayersList(allPlayersCache, res[0]||{}, res[1]||{}, q);
+    });
+  });
+  document.getElementById('player-refresh-btn').addEventListener('click', loadPlayers);
+  document.getElementById('player-search-inp').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('player-search-btn').click(); });
+  document.getElementById('signin-btn').addEventListener('click', doLogin);
+  document.getElementById('logout-btn').addEventListener('click', doLogout);
+  document.getElementById('new-agent-btn').addEventListener('click', function(){ openModal('modal-new-agent'); });
+  document.getElementById('topup-btn').addEventListener('click', function(){ openModal('modal-topup'); });
+  document.getElementById('txns-btn').addEventListener('click', function(){ openModal('modal-txns'); });
+  document.getElementById('reports-btn').addEventListener('click', function(){ openModal('modal-report'); });
+  document.getElementById('agentweb-btn').addEventListener('click', function(){ openModal('modal-agentweb'); openModal('modal-pending'); });
+  document.getElementById('na-close-btn').addEventListener('click', function(){ closeModal('modal-new-agent'); });
+  document.getElementById('tu-close-btn').addEventListener('click', function(){ closeModal('modal-topup'); });
+  document.getElementById('tx-close-btn').addEventListener('click', function(){ closeModal('modal-txns'); });
+  document.getElementById('rpt-close-btn').addEventListener('click', function(){ document.getElementById('modal-report').classList.remove('open'); });
+  document.getElementById('aw-close-btn').addEventListener('click', function(){ document.getElementById('modal-agentweb').classList.remove('open'); });
+  document.getElementById('pd-close-btn').addEventListener('click', function(){ document.getElementById('modal-pending').classList.remove('open'); });
+  document.getElementById('create-agent-btn').addEventListener('click', createAgent);
+  document.getElementById('topup-confirm-btn').addEventListener('click', doTopup);
+  document.getElementById('topup-cancel-btn').addEventListener('click', cancelTopup);
+  document.getElementById('refresh-btn').addEventListener('click', loadAll);
+  document.getElementById('agent-search').addEventListener('input', searchAgents);
+  document.getElementById('agent-search').addEventListener('focus', searchAgents);
+  document.getElementById('txn-search').addEventListener('input', renderTxns);
+  document.getElementById('rpt-run-btn').addEventListener('click', runReport);
+  document.getElementById('aw-agent-sel').addEventListener('change', onAwAgentSelect);
+  document.getElementById('aw-add-crypto-btn').addEventListener('click', addCrypto);
+  document.getElementById('aw-save-btn').addEventListener('click', saveAgentWebSettings);
+  document.getElementById('aw-copy-link').addEventListener('click', function() {
+    var link = document.getElementById('aw-link').textContent;
+    navigator.clipboard.writeText(link).then(function(){ document.getElementById('aw-copy-link').textContent = 'Copied!'; setTimeout(function(){ document.getElementById('aw-copy-link').textContent = 'Copy Link'; }, 2000); });
+  });
+  document.getElementById('pd-filter-all').addEventListener('click', function(){ pdFilter='all'; loadPendingDeposits(); });
+  document.getElementById('pd-filter-pending').addEventListener('click', function(){ pdFilter='pending'; loadPendingDeposits(); });
+  document.getElementById('pd-filter-approved').addEventListener('click', function(){ pdFilter='approved'; loadPendingDeposits(); });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key==='Enter' && document.getElementById('login-screen').style.display!=='none') doLogin();
+  });
+  document.addEventListener('click', function(e) {
+    var dd = document.getElementById('search-dropdown');
+    if (dd && !e.target.closest('.search-wrap')) dd.classList.remove('open');
+    ['modal-new-agent','modal-topup','modal-txns','modal-report','modal-agentweb','modal-pending','modal-players','modal-player-detail','modal-sendmsg','modal-issues','modal-sportbets','modal-sportevents','modal-contacts'].forEach(function(id) {
+      if (e.target===document.getElementById(id)) document.getElementById(id).classList.remove('open');
+    });
+  });
+
+  setInterval(function() {
+    if (document.getElementById('panel').classList.contains('active')) loadAll();
+  }, 10000);
+
+})();
+</script>
+</body>
+</html>

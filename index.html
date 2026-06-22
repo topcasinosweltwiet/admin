@@ -1413,6 +1413,9 @@
       fbGet('/players/'+key+'/kyc')
     ]).then(function(res) {
       var agentTxns=res[0]||{}, playerTxns=res[1]||{}, cryptoDeps=res[2]||{}, kyc=res[3]||null;
+      var depositMethods=res[4]||{};
+      var allowedWdMethods=res[5]||{};
+      var wdSections=res[6]||{};
       var uid = String(p.uid||'');
       var deps = Object.values(agentTxns).filter(function(t){return String(t.customerUid||'')===uid&&t.type==='deposit';});
       var wds  = Object.values(agentTxns).filter(function(t){return String(t.customerUid||'')===uid&&t.type==='withdraw';});
@@ -1503,9 +1506,82 @@
         }).join('');
       } else html += '<div style="color:#4a6ab0;font-size:13px;">No game history.</div>';
 
+      // ── WITHDRAWAL METHODS SECTION ──
+      html += '<div style="background:#060d1a;border:1px solid #1a3a7c;border-radius:12px;padding:14px;margin-top:1rem;">';
+      html += '<div style="font-size:13px;font-weight:700;color:#7eb3ff;margin-bottom:10px;">Withdrawal Method Permissions</div>';
+      
+      // Show what methods player deposited with
+      var depMethodKeys = Object.keys(depositMethods);
+      if(depMethodKeys.length > 0){
+        html += '<div style="font-size:11px;color:#4a6ab0;margin-bottom:8px;">Deposited via:</div>';
+        depMethodKeys.forEach(function(mk){
+          var m = depositMethods[mk];
+          html += '<div style="display:inline-block;background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin:2px;">'+m.title+'</div>';
+        });
+      } else {
+        html += '<div style="font-size:12px;color:#4a6ab0;margin-bottom:8px;">No deposit methods tracked yet.</div>';
+      }
+
+      // Show all withdrawal sections with allow/block controls
+      var wdSecKeys = Object.keys(wdSections);
+      if(wdSecKeys.length > 0){
+        html += '<div style="font-size:11px;color:#4a6ab0;margin:10px 0 6px;">Withdrawal permissions (per method):</div>';
+        html += '<div id="wd-perms-'+key+'">';
+        wdSecKeys.forEach(function(sk){
+          var sec = wdSections[sk];
+          var usedToDeposit = !!depositMethods[sk];
+          var override = allowedWdMethods[sk];
+          var status = override==='allowed'?'allowed': override==='blocked'?'blocked': usedToDeposit?'auto-allowed':'auto-blocked';
+          var statusColor = (status==='allowed'||status==='auto-allowed')?'#4ade80':'#e74c3c';
+          var statusLabel = status==='allowed'?'UNLOCKED': status==='blocked'?'BLOCKED': status==='auto-allowed'?'AUTO (deposited)':'AUTO (not deposited)';
+          html += '<div data-sk="'+sk+'" data-pkey="'+key+'" class="wd-perm-row" style="display:flex;align-items:center;justify-content:space-between;background:#0a1525;border-radius:8px;padding:8px 10px;margin-bottom:6px;">';
+          html += '<div><div style="font-size:12px;font-weight:700;color:#e0e8ff;">'+(sec.icon||'💸')+' '+(sec.title||sk)+'</div>';
+          html += '<div style="font-size:10px;color:'+statusColor+';font-weight:600;">'+statusLabel+'</div></div>';
+          html += '<div style="display:flex;gap:4px;">';
+          html += '<button data-action="allowed" class="wd-perm-btn" style="padding:4px 8px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.4);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">Unlock</button>';
+          html += '<button data-action="auto" class="wd-perm-btn" style="padding:4px 8px;background:rgba(246,201,0,0.1);color:#f6c90e;border:1px solid rgba(246,201,0,0.3);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">Auto</button>';
+          html += '<button data-action="blocked" class="wd-perm-btn" style="padding:4px 8px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">Block</button>';
+          html += '</div></div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+
       body.innerHTML = html;
+      // Wire wd-perm buttons via event delegation (avoids onclick quote issues)
+      body.querySelectorAll('.wd-perm-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var row=btn.closest('.wd-perm-row');
+          var sk=row.dataset.sk, pkey=row.dataset.pkey, action=btn.dataset.action;
+          window.setWdPerm(pkey,sk,action);
+        });
+      });
     }).catch(function(e){body.innerHTML='<div style="color:#e74c3c;">Error: '+e.message+'</div>';});
   }
+
+  window.setWdPerm = function(playerKey, sectionKey, status) {
+    var update = {};
+    if(status === 'auto'){
+      // Remove override - revert to auto (based on deposit history)
+      fetch(FB+'/players/'+playerKey+'/allowedWdMethods/'+sectionKey+'.json',{method:'DELETE'}).then(function(){
+        alert('Reset to auto — player can withdraw via this method only if they deposited with it.');
+        viewPlayerDetail(playerKey);
+      });
+    } else {
+      update[sectionKey] = status;
+      fbUp('/players/'+playerKey+'/allowedWdMethods', update).then(function(){
+        var msg = status==='allowed'?'Method UNLOCKED for player.':'Method BLOCKED for player.';
+        // Notify player
+        fbPush('/notifications/'+playerKey, {
+          msg: status==='allowed'?'A new withdrawal method has been unlocked for you. Check your withdrawal options.':'A withdrawal method has been restricted. Contact support for help.',
+          type: status==='allowed'?'deposit':'rejected',
+          time: new Date().toISOString(), read: false
+        });
+        alert(msg);
+        viewPlayerDetail(playerKey);
+      }).catch(function(e){alert('Error: '+e.message);});
+    }
+  };
 
   window.toggleWdBlock = function(key, block) {
     var msg = block ? 'Block withdrawal for this player?' : 'Unblock withdrawal for this player?';

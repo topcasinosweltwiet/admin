@@ -562,26 +562,6 @@
 </div>
 
 <script>
-  // Global login function so onclick works
-  var ADMIN_USER = 'nepalcanmove';
-  var ADMIN_PASS = 'nepalismovingfast@#20';
-  var FB = 'https://topcasinos-b75b3-default-rtdb.asia-southeast1.firebasedatabase.app';
-
-  function adminLogin() {
-    var u = document.getElementById('l-user').value.trim();
-    var p = document.getElementById('l-pass').value.trim();
-    var err = document.getElementById('login-err');
-    err.style.display = 'none';
-    if (u === ADMIN_USER && p === ADMIN_PASS) {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('panel').classList.add('active');
-      if (typeof loadAll === 'function') loadAll();
-    } else {
-      err.textContent = 'Incorrect username or password.';
-      err.style.display = 'block';
-    }
-  }
-
 (function() {
   var ADMIN_USER = 'nepalcanmove';
   var ADMIN_PASS = 'nepalismovingfast@#20';
@@ -630,6 +610,25 @@
   }
 
   // ── LOAD ALL ──
+  window.adminLogin = function() {
+    var u = document.getElementById('l-user').value.trim();
+    var p = document.getElementById('l-pass').value.trim();
+    var err = document.getElementById('login-err');
+    err.style.display = 'none';
+    if (u === ADMIN_USER && p === ADMIN_PASS) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('panel').classList.add('active');
+      loadAll();
+      // Wire Enter key for login
+      [document.getElementById('l-user'), document.getElementById('l-pass')].forEach(function(el) {
+        if(el) el.addEventListener('keydown', function(e){ if(e.key==='Enter') window.adminLogin(); });
+      });
+    } else {
+      err.textContent = 'Wrong username or password.';
+      err.style.display = 'block';
+    }
+  };
+
   function loadAll() {
     window.loadAll = loadAll;
     // Load player count for badge

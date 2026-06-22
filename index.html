@@ -2484,7 +2484,9 @@
   function openWdSections(){
     document.getElementById('modal-wd-sections').classList.add('open');
     _wdFields=[];renderWdFlds();
+    _wdLoading=false; // always reset so dedup runs fresh
     ['wd-sec-title','wd-sec-icon','wd-sec-desc'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    var e=document.getElementById('wd-sec-err');if(e){e.style.display='none';}
     loadWdList();loadWdReqs();
   }
 
@@ -2626,6 +2628,46 @@
   };
 
 
+  window.cleanWdDuplicates = function() {
+    fbGet('/withdrawalSections').then(function(data){
+      if(!data||!Object.keys(data).length){alert('No sections to clean.');return;}
+      var seen={}, toDelete=[];
+      Object.entries(data).forEach(function(e){
+        var t=(e[1].title||'').toLowerCase();
+        if(seen[t])toDelete.push(seen[t]);
+        seen[t]=e[0];
+      });
+      if(!toDelete.length){alert('No duplicates found!');return;}
+      if(!confirm('Delete '+toDelete.length+' duplicate(s)?'))return;
+      Promise.all(toDelete.map(function(k){
+        return fetch(FB+'/withdrawalSections/'+k+'.json',{method:'DELETE'});
+      })).then(function(){
+        alert('Cleaned '+toDelete.length+' duplicate(s)!');
+        _wdLoading=false;loadWdList();
+      });
+    });
+  };
+
+  window.cleanDepDuplicates = function() {
+    fbGet('/depositSections').then(function(data){
+      if(!data||!Object.keys(data).length){alert('No sections to clean.');return;}
+      var seen={}, toDelete=[];
+      Object.entries(data).forEach(function(e){
+        var t=(e[1].title||'').toLowerCase();
+        if(seen[t])toDelete.push(seen[t]);
+        seen[t]=e[0];
+      });
+      if(!toDelete.length){alert('No duplicates found!');return;}
+      if(!confirm('Delete '+toDelete.length+' duplicate(s)?'))return;
+      Promise.all(toDelete.map(function(k){
+        return fetch(FB+'/depositSections/'+k+'.json',{method:'DELETE'});
+      })).then(function(){
+        alert('Cleaned '+toDelete.length+' duplicate(s)!');
+        _depListLoading=false;loadDepList();
+      });
+    });
+  };
+
   // Wire deposit/withdrawal modal buttons (ONCE)
   document.getElementById('dep-sections-btn').addEventListener('click', openDepSections);
   document.getElementById('dep-sections-close').addEventListener('click', function(){document.getElementById('modal-dep-sections').classList.remove('open');});
@@ -2701,7 +2743,10 @@
 <div class="overlay" id="modal-wd-sections">
   <div class="modal" style="max-width:620px;">
     <button class="mclose" id="wd-sections-close">✕</button>
-    <div class="modal-title">Withdrawal Options</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="modal-title" style="margin:0;">Withdrawal Options</div>
+      <button onclick="cleanWdDuplicates()" style="padding:5px 12px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">🧹 Clean Duplicates</button>
+    </div>
     <div class="modal-sub">Manage withdrawal methods shown to players</div>
     <div style="background:#060d1a;border:1px solid #1a3a7c;border-radius:12px;padding:1rem;margin-bottom:1rem;">
       <div style="font-size:13px;font-weight:700;color:#7eb3ff;margin-bottom:10px;" id="wd-sec-form-title">Add New Withdrawal Option</div>

@@ -1513,53 +1513,69 @@
       html += '<div style="background:#060d1a;border:1px solid #1a3a7c;border-radius:12px;padding:14px;margin-top:1rem;">';
       html += '<div style="font-size:13px;font-weight:700;color:#7eb3ff;margin-bottom:10px;">Withdrawal Method Permissions</div>';
       
-      // Show what methods player deposited with
       var depMethodKeys = Object.keys(depositMethods);
       if(depMethodKeys.length > 0){
         html += '<div style="font-size:11px;color:#4a6ab0;margin-bottom:8px;">Deposited via:</div>';
         depMethodKeys.forEach(function(mk){
           var m = depositMethods[mk];
-          html += '<div style="display:inline-block;background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin:2px;">'+m.title+'</div>';
+          html += '<div style="display:inline-block;background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin:2px;">'+(m.title||mk)+'</div>';
         });
       } else {
         html += '<div style="font-size:12px;color:#4a6ab0;margin-bottom:8px;">No deposit methods tracked yet.</div>';
       }
 
-      // Show all withdrawal sections with allow/block controls
       var wdSecKeys = Object.keys(wdSections);
       if(wdSecKeys.length > 0){
-        html += '<div style="font-size:11px;color:#4a6ab0;margin:10px 0 6px;">Withdrawal permissions (per method):</div>';
-        html += '<div id="wd-perms-'+key+'">';
-        wdSecKeys.forEach(function(sk){
-          var sec = wdSections[sk];
-          var usedToDeposit = !!depositMethods[sk];
-          var override = allowedWdMethods[sk];
-          var status = override==='allowed'?'allowed': override==='blocked'?'blocked': usedToDeposit?'auto-allowed':'auto-blocked';
-          var statusColor = (status==='allowed'||status==='auto-allowed')?'#4ade80':'#e74c3c';
-          var statusLabel = status==='allowed'?'UNLOCKED': status==='blocked'?'BLOCKED': status==='auto-allowed'?'AUTO (deposited)':'AUTO (not deposited)';
-          html += '<div data-sk="'+sk+'" data-pkey="'+key+'" class="wd-perm-row" style="display:flex;align-items:center;justify-content:space-between;background:#0a1525;border-radius:8px;padding:8px 10px;margin-bottom:6px;">';
-          html += '<div><div style="font-size:12px;font-weight:700;color:#e0e8ff;">'+(sec.icon||'💸')+' '+(sec.title||sk)+'</div>';
-          html += '<div style="font-size:10px;color:'+statusColor+';font-weight:600;">'+statusLabel+'</div></div>';
-          html += '<div style="display:flex;gap:4px;">';
-          html += '<button data-action="allowed" class="wd-perm-btn" style="padding:4px 8px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.4);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">Unlock</button>';
-          html += '<button data-action="auto" class="wd-perm-btn" style="padding:4px 8px;background:rgba(246,201,0,0.1);color:#f6c90e;border:1px solid rgba(246,201,0,0.3);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">Auto</button>';
-          html += '<button data-action="blocked" class="wd-perm-btn" style="padding:4px 8px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">Block</button>';
-          html += '</div></div>';
-        });
-        html += '</div>';
+        html += '<div style="font-size:11px;color:#4a6ab0;margin:10px 0 6px;">Set withdrawal permission per method:</div>';
+        html += '<div id="wd-perms-wrap"></div>';
+      } else {
+        html += '<div style="font-size:12px;color:#4a6ab0;margin-top:8px;">No withdrawal sections configured yet.</div>';
       }
       html += '</div>';
 
       body.innerHTML = html;
-      // Wire wd-perm buttons
-      body.querySelectorAll('.wd-perm-btn').forEach(function(btn){
-        btn.addEventListener('click',function(){
-          var row=btn.closest('.wd-perm-row');
-          if(!row)return;
-          var sk=row.dataset.sk, pkey=row.dataset.pkey, action=btn.dataset.action;
-          window.setWdPerm(pkey,sk,action);
+
+      // Build wd-perms using DOM (no quote escaping issues)
+      var wdPermsWrap = body.querySelector('#wd-perms-wrap');
+      if(wdPermsWrap && wdSecKeys.length > 0){
+        wdSecKeys.forEach(function(sk){
+          var sec = wdSections[sk];
+          var usedToDeposit = !!depositMethods[sk];
+          var override = allowedWdMethods[sk];
+          var isAllowed = override==='allowed' || (override!=='blocked' && usedToDeposit);
+          var statusLabel = override==='allowed'?'UNLOCKED': override==='blocked'?'BLOCKED': usedToDeposit?'AUTO (deposited)':'AUTO (locked)';
+          var statusColor = isAllowed?'#4ade80':'#e74c3c';
+
+          var row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:#0a1525;border-radius:8px;padding:8px 10px;margin-bottom:6px;';
+          
+          var info = document.createElement('div');
+          var nm = document.createElement('div'); nm.style.cssText='font-size:12px;font-weight:700;color:#e0e8ff;'; nm.textContent=(sec.icon||'💸')+' '+(sec.title||sk);
+          var st2 = document.createElement('div'); st2.style.cssText='font-size:10px;color:'+statusColor+';font-weight:600;margin-top:2px;'; st2.textContent=statusLabel;
+          info.appendChild(nm); info.appendChild(st2);
+
+          var btns = document.createElement('div'); btns.style.cssText='display:flex;gap:4px;flex-shrink:0;';
+          
+          [['Unlock','allowed','rgba(74,222,128,0.15)','#4ade80','rgba(74,222,128,0.4)'],
+           ['Auto','auto','rgba(246,201,0,0.1)','#f6c90e','rgba(246,201,0,0.3)'],
+           ['Block','blocked','rgba(231,76,60,0.1)','#e74c3c','rgba(231,76,60,0.3)']
+          ].forEach(function(cfg){
+            var b = document.createElement('button');
+            b.textContent = cfg[0];
+            b.style.cssText = 'padding:5px 10px;background:'+cfg[2]+';color:'+cfg[3]+';border:1px solid '+cfg[4]+';border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;';
+            (function(sectionKey, playerKey, action){
+              b.addEventListener('click', function(){
+                window.setWdPerm(playerKey, sectionKey, action);
+              });
+            })(sk, key, cfg[1]);
+            btns.appendChild(b);
+          });
+
+          row.appendChild(info); row.appendChild(btns);
+          wdPermsWrap.appendChild(row);
         });
-      });
+      }
+
       // Wire delete button
       var delBtn=body.querySelector('.pd-del-btn');
       if(delBtn){delBtn.addEventListener('click',function(){
@@ -2398,14 +2414,25 @@
       links:depSecLinks.filter(function(l){return l.label&&l.url;}),
       active:true,createdAt:new Date().toISOString()};
     var btn=document.getElementById('dep-sec-save'); btn.textContent='Saving...'; btn.disabled=true;
-    fbPush('/depositSections',data).then(function(){
+    // Check for duplicate title before saving
+    fbGet('/depositSections').then(function(existing){
+      if(existing){
+        var dupe = Object.values(existing).find(function(s){return (s.title||'').toLowerCase()===title.toLowerCase();});
+        if(dupe){
+          if(errEl){errEl.textContent='A section with this title already exists!';errEl.style.display='block';}
+          btn.textContent='Add Section'; btn.disabled=false; return Promise.resolve(null);
+        }
+      }
+      return fbPush('/depositSections',data);
+    }).then(function(res){
+      if(!res)return;
       btn.textContent='Add Section'; btn.disabled=false;
       ['dep-sec-title','dep-sec-icon','dep-sec-desc','dep-sec-qr','dep-sec-proof-label'].forEach(function(id){
         var el=document.getElementById(id); if(el)el.value='';
       });
       depSecOptions=[]; depSecLinks=[]; renderDepOptions(); renderDepLinks();
       loadDepSectionsList();
-      if(errEl){errEl.textContent='Saved!';errEl.style.color='#4ade80';errEl.style.display='block';
+      if(errEl){errEl.textContent='Section added!';errEl.style.color='#4ade80';errEl.style.display='block';
         setTimeout(function(){errEl.style.display='none';errEl.style.color='';},2000);}
     }).catch(function(e){if(errEl){errEl.textContent='Error: '+e.message;errEl.style.display='block';}btn.textContent='Add Section';btn.disabled=false;});
   }
@@ -2415,6 +2442,18 @@
     wrap.innerHTML='<div style="text-align:center;padding:1rem;color:#4a6ab0;">Loading...</div>';
     fbGet('/depositSections').then(function(data){
       if(!data||!Object.keys(data).length){wrap.innerHTML='<div style="text-align:center;padding:1rem;color:#4a6ab0;">No deposit sections yet. Add one above!</div>';return;}
+      // Auto-deduplicate: keep only the LAST entry per title
+      var seen={}, toDelete=[];
+      Object.entries(data).forEach(function(e){
+        var k=e[0], t=(e[1].title||'').toLowerCase();
+        if(seen[t]) toDelete.push(seen[t]); // delete previous duplicate
+        seen[t]=k;
+      });
+      if(toDelete.length>0){
+        Promise.all(toDelete.map(function(k){return fetch(FB+'/depositSections/'+k+'.json',{method:'DELETE'});}))
+          .then(function(){loadDepSectionsList();});
+        return;
+      }
       wrap.innerHTML='';
       Object.entries(data).forEach(function(e){
         var key=e[0],sec=e[1],isActive=sec.active!==false;

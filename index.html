@@ -485,6 +485,14 @@
   <div class="modal" style="max-width:700px;">
     <button class="mclose" id="sportbets-close">✕</button>
     <div class="modal-title">Sport Bets <span id="sportbets-total" style="font-size:13px;color:#4a6ab0;font-weight:400;"></span></div>
+
+    <!-- QUICK SETTLE BY EVENT -->
+    <div style="background:#060d1a;border:1px solid #f6c90e;border-radius:10px;padding:12px;margin-bottom:1rem;">
+      <div style="font-size:12px;font-weight:700;color:#f6c90e;margin-bottom:8px;">Quick Settle — Mark all bets for one event at once</div>
+      <div id="quick-settle-list" style="max-height:200px;overflow-y:auto;"></div>
+      <button onclick="loadQuickSettle()" style="padding:5px 12px;background:rgba(126,179,255,0.1);color:#7eb3ff;border:1px solid rgba(126,179,255,0.3);border-radius:6px;font-size:11px;cursor:pointer;margin-top:6px;">Refresh Events</button>
+    </div>
+
     <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
       <button class="btn-sm sb-filter-btn active" data-f="pending">Pending</button>
       <button class="btn-sm sb-filter-btn" data-f="won">Won</button>
@@ -1751,7 +1759,94 @@
   function openSportBets() {
     document.getElementById('modal-sportbets').classList.add('open');
     loadSportBets();
+    loadQuickSettle();
   }
+
+  function loadQuickSettle() {
+    var wrap = document.getElementById('quick-settle-list');
+    wrap.innerHTML='<div style="font-size:11px;color:#4a6ab0;">Loading...</div>';
+    fbGet('/sportBets').then(function(data){
+      if(!data){wrap.innerHTML='<div style="font-size:11px;color:#4a6ab0;">No pending bets.</div>';return;}
+      // Group pending bets by event
+      var events = {};
+      Object.entries(data).forEach(function(e){
+        var key=e[0], b=e[1];
+        if(b.status!=='pending') return;
+        var evKey = b.eventKey||b.event;
+        if(!events[evKey]) events[evKey]={name:b.event,league:b.league,bets:[],totalPlayers:0};
+        events[evKey].bets.push({key:key,bet:b});
+        events[evKey].totalPlayers++;
+      });
+      var evEntries = Object.entries(events);
+      if(!evEntries.length){wrap.innerHTML='<div style="font-size:11px;color:#4ade80;">No pending bets to settle.</div>';return;}
+      wrap.innerHTML='';
+      evEntries.forEach(function(e){
+        var evKey=e[0], ev=e[1];
+        var row=document.createElement('div');
+        row.style.cssText='background:#0a1525;border:1px solid #1a3a7c;border-radius:8px;padding:10px;margin-bottom:6px;';
+        var info=document.createElement('div');
+        info.style.cssText='margin-bottom:8px;';
+        var nm=document.createElement('div'); nm.style.cssText='font-size:13px;font-weight:700;color:#fff;';
+        nm.textContent=ev.name;
+        var sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:#4a6ab0;margin-top:2px;';
+        sub.textContent=(ev.league||'')+' · '+ev.totalPlayers+' player(s) have pending bets';
+        info.appendChild(nm); info.appendChild(sub); row.appendChild(info);
+        var btns=document.createElement('div'); btns.style.cssText='display:flex;gap:6px;';
+        var bw=document.createElement('button');
+        bw.style.cssText='flex:1;padding:8px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.4);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;';
+        bw.textContent='Mark ALL WON ('+ev.totalPlayers+' bets)';
+        bw.addEventListener('click',function(){
+          if(!confirm('Mark ALL '+ev.totalPlayers+' bets as WON for this event?'))return;
+
+
+          bw.textContent='Processing...'; bw.disabled=true; bl.disabled=true;
+          var promises=ev.bets.map(function(item){
+            var b=item.bet; var payout=b.finalPayout||b.potentialPayout||Math.floor((b.bet||0)*(b.odds||1));
+            return fbUpdate('/sportBets/'+item.key,{status:'won',settled:true,settledAt:new Date().toISOString(),finalPayout:payout}).then(function(){
+              return fbGet('/players/'+b.playerKey).then(function(player){
+                if(!player)return;
+                var nb=Math.min((Number(player.balance)||0)+payout, 10000000);
+                return fbUpdate('/players/'+b.playerKey,{balance:nb}).then(function(){
+                  return fbPush('/notifications/'+b.playerKey,{
+                    msg:'Sport bet WON! Rs.'+Number(payout).toLocaleString('en-NP')+' added to your balance! Match: '+b.event,
+                    type:'deposit',time:new Date().toISOString(),read:false
+                  });
+                });
+              });
+            });
+          });
+          Promise.all(promises).then(function(){
+            alert('Done! All '+ev.totalPlayers+' players notified and credited.');
+            loadQuickSettle(); loadSportBets();
+          }).catch(function(e){alert('Error: '+e.message);bw.disabled=false;bl.disabled=false;bw.textContent='Mark ALL WON';});
+        });
+        var bl=document.createElement('button');
+        bl.style.cssText='flex:1;padding:8px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.4);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;';
+        bl.textContent='Mark ALL LOST ('+ev.totalPlayers+' bets)';
+        bl.addEventListener('click',function(){
+          if(!confirm('Mark ALL '+ev.totalPlayers+' bets as LOST for this event?'))return;
+
+
+          bw.disabled=true; bl.textContent='Processing...'; bl.disabled=true;
+          var promises=ev.bets.map(function(item){
+            var b=item.bet;
+            return fbUpdate('/sportBets/'+item.key,{status:'lost',settled:true,settledAt:new Date().toISOString(),finalPayout:0}).then(function(){
+              return fbPush('/notifications/'+b.playerKey,{
+                msg:'Sport bet result: LOST. Match: '+b.event+'. Bet of Rs.'+Number(b.bet).toLocaleString('en-NP')+' was already deducted. Better luck next time!',
+                type:'rejected',time:new Date().toISOString(),read:false
+              });
+            });
+          });
+          Promise.all(promises).then(function(){
+            alert('Done! All '+ev.totalPlayers+' players notified.');
+            loadQuickSettle(); loadSportBets();
+          }).catch(function(e){alert('Error: '+e.message);bw.disabled=false;bl.disabled=false;bl.textContent='Mark ALL LOST';});
+        });
+        btns.appendChild(bw); btns.appendChild(bl); row.appendChild(btns); wrap.appendChild(row);
+      });
+    }).catch(function(){wrap.innerHTML='<div style="color:#e74c3c;font-size:11px;">Error loading.</div>';});
+  }
+  window.loadQuickSettle = loadQuickSettle;
   function loadSportBets() {
     var wrap = document.getElementById('sportbets-list');
     wrap.innerHTML = '<div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading...</div>';
@@ -2151,109 +2246,59 @@
     if (dd && !e.target.closest('.search-wrap')) dd.classList.remove('open');
 
   // ── DEPOSIT SECTIONS ──
-  var editingDepSecKey = null;
-  var depSecOptions = [];
-  var depSecLinks = [];
+  var depSecOptions = [], depSecLinks = [], depSaveListenerAdded = false;
 
   function openDepSections() {
     document.getElementById('modal-dep-sections').classList.add('open');
     loadDepSectionsList();
+    if(!depSaveListenerAdded) {
+      depSaveListenerAdded = true;
+      document.getElementById('dep-sec-save').addEventListener('click', saveDepSection);
+    }
   }
 
-  window.addDepOption = function() {
-    depSecOptions.push({label:'',sub:'',address:''});
-    renderDepOptions();
-  };
-  window.addDepLink = function() {
-    depSecLinks.push({label:'',url:'',icon:'',color:'',sub:''});
-    renderDepLinks();
-  };
+  window.addDepOption = function() { depSecOptions.push({label:'',sub:'',address:''}); renderDepOptions(); };
+  window.addDepLink = function() { depSecLinks.push({label:'',url:'',icon:'',color:''}); renderDepLinks(); };
 
   function renderDepOptions() {
-    var wrap = document.getElementById('dep-sec-options');
-    wrap.innerHTML = '';
+    var wrap = document.getElementById('dep-sec-options'); wrap.innerHTML='';
     depSecOptions.forEach(function(opt,i) {
-      var row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;';
-      row.innerHTML =
-        '<input placeholder="Label (e.g. USDT TRC20)" value="'+escHtml(opt.label||'')+'" style="padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;" onchange="depSecOptions['+i+'].label=this.value"/>'+
-        '<input placeholder="Sub (e.g. Tron Network)" value="'+escHtml(opt.sub||'')+'" style="padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;" onchange="depSecOptions['+i+'].sub=this.value"/>'+
-        '<input placeholder="Address/Account No" value="'+escHtml(opt.address||'')+'" style="padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;" onchange="depSecOptions['+i+'].address=this.value"/>'+
-        '<button onclick="depSecOptions.splice('+i+',1);renderDepOptions();" style="padding:6px 8px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;cursor:pointer;font-size:12px;">×</button>';
-      wrap.appendChild(row);
+      var row=document.createElement('div');
+      row.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;';
+      ['Label','Sub (network)','Address/Account'].forEach(function(ph,fi) {
+        var inp=document.createElement('input');
+        inp.placeholder=ph; inp.value=Object.values(opt)[fi]||'';
+        inp.style.cssText='padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;';
+        var keys=['label','sub','address'];
+        inp.addEventListener('input',function(){depSecOptions[i][keys[fi]]=this.value;});
+        row.appendChild(inp);
+      });
+      var del=document.createElement('button');
+      del.textContent='×'; del.style.cssText='padding:6px 8px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;cursor:pointer;font-size:12px;';
+      del.addEventListener('click',function(){depSecOptions.splice(i,1);renderDepOptions();});
+      row.appendChild(del); wrap.appendChild(row);
     });
   }
 
   function renderDepLinks() {
-    var wrap = document.getElementById('dep-sec-links');
-    wrap.innerHTML = '';
+    var wrap=document.getElementById('dep-sec-links'); wrap.innerHTML='';
     depSecLinks.forEach(function(lnk,i) {
-      var row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 40px 60px auto;gap:6px;margin-bottom:6px;';
-      row.innerHTML =
-        '<input placeholder="Label (e.g. Pay via eSewa)" value="'+escHtml(lnk.label||'')+'" style="padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;" onchange="depSecLinks['+i+'].label=this.value"/>'+
-        '<input placeholder="URL" value="'+escHtml(lnk.url||'')+'" style="padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;" onchange="depSecLinks['+i+'].url=this.value"/>'+
-        '<input placeholder="🔗" value="'+escHtml(lnk.icon||'')+'" style="padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;text-align:center;" onchange="depSecLinks['+i+'].icon=this.value"/>'+
-        '<input placeholder="#color" value="'+escHtml(lnk.color||'')+'" style="padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;" onchange="depSecLinks['+i+'].color=this.value"/>'+
-        '<button onclick="depSecLinks.splice('+i+',1);renderDepLinks();" style="padding:6px 8px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;cursor:pointer;font-size:12px;">×</button>';
-      wrap.appendChild(row);
+      var row=document.createElement('div');
+      row.style.cssText='display:grid;grid-template-columns:1fr 1fr 40px 60px auto;gap:6px;margin-bottom:6px;';
+      [['Label','label'],['URL','url'],['Icon','icon'],['Color','color']].forEach(function(pair,fi){
+        var inp=document.createElement('input'); inp.placeholder=pair[0]; inp.value=lnk[pair[1]]||'';
+        inp.style.cssText='padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;text-align:'+(fi>1?'center':'left')+';';
+        inp.addEventListener('input',function(){depSecLinks[i][pair[1]]=this.value;});
+        row.appendChild(inp);
+      });
+      var del=document.createElement('button');
+      del.textContent='×'; del.style.cssText='padding:6px 8px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;cursor:pointer;font-size:12px;';
+      del.addEventListener('click',function(){depSecLinks.splice(i,1);renderDepLinks();});
+      row.appendChild(del); wrap.appendChild(row);
     });
   }
 
-  function escHtml(s){ var t=String(s||''); t=t.replace(/&/g,'&amp;'); t=t.replace(/\x3c/g,'&lt;'); t=t.replace(/\x3e/g,'&gt;'); t=t.replace(/"/g,'&quot;'); return t; }
-
-  function loadDepSectionsList() {
-    var wrap = document.getElementById('dep-sections-list');
-    wrap.innerHTML = '<div style="text-align:center;padding:1rem;color:#4a6ab0;">Loading...</div>';
-    fbGet('/depositSections').then(function(data){
-      if(!data||!Object.keys(data).length){
-        wrap.innerHTML='<div style="text-align:center;padding:1rem;color:#4a6ab0;">No deposit sections yet.</div>'; return;
-      }
-      wrap.innerHTML='';
-      Object.entries(data).forEach(function(e){
-        var key=e[0], sec=e[1];
-        var isActive=sec.active!==false;
-        var row=document.createElement('div');
-        row.style.cssText='background:#060d1a;border:1px solid #1a3a7c;border-radius:10px;padding:12px;margin-bottom:8px;';
-        // Header
-        var hdr=document.createElement('div');
-        hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;';
-        var ttl=document.createElement('div');
-        ttl.style.cssText='font-size:14px;font-weight:700;color:#fff;';
-        ttl.textContent=(sec.icon||'💰')+' '+(sec.title||'');
-        var badge=document.createElement('span');
-        badge.style.cssText='background:'+(isActive?'rgba(74,222,128,0.1)':'rgba(231,76,60,0.1)')+';color:'+(isActive?'#4ade80':'#e74c3c')+';border:1px solid '+(isActive?'rgba(74,222,128,0.3)':'rgba(231,76,60,0.3)')+';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;';
-        badge.textContent=isActive?'ACTIVE':'HIDDEN';
-        hdr.appendChild(ttl); hdr.appendChild(badge); row.appendChild(hdr);
-        // Description
-        if(sec.description){var d=document.createElement('div');d.style.cssText='font-size:12px;color:#4a6ab0;margin-bottom:6px;';d.textContent=sec.description;row.appendChild(d);}
-        if(sec.qrImageUrl){var q=document.createElement('div');q.style.cssText='font-size:11px;color:#4a6ab0;margin-bottom:6px;';q.innerHTML='QR: <a href="'+sec.qrImageUrl+'" target="_blank" style="color:#7eb3ff;">View QR Image</a>';row.appendChild(q);}
-        if(sec.options&&sec.options.length){var o=document.createElement('div');o.style.cssText='font-size:11px;color:#4a6ab0;margin-bottom:6px;';o.textContent=sec.options.length+' option(s)';row.appendChild(o);}
-        // Buttons
-        var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;';
-        var btnToggle=document.createElement('button');
-        btnToggle.style.cssText='flex:1;padding:6px;background:rgba(246,201,0,0.1);color:#f6c90e;border:1px solid rgba(246,201,0,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;';
-        btnToggle.textContent=isActive?'Hide':'Show';
-        btnToggle.addEventListener('click',function(){toggleDepSec(key,!isActive);});
-        var btnDel=document.createElement('button');
-        btnDel.style.cssText='flex:1;padding:6px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;';
-        btnDel.textContent='Delete';
-        btnDel.addEventListener('click',function(){deleteDepSec(key);});
-        btns.appendChild(btnToggle); btns.appendChild(btnDel); row.appendChild(btns);
-        wrap.appendChild(row);
-      });
-    }).catch(function(e){wrap.innerHTML='<div style="color:#e74c3c;padding:1rem;">Error: '+e.message+'</div>';});
-  }
-
-  window.toggleDepSec=function(key,active){
-    fbUpdate('/depositSections/'+key,{active:active}).then(function(){loadDepSectionsList();});
-  };
-  window.deleteDepSec=function(key){
-    if(!confirm('Delete this deposit section?'))return;
-    fetch(FB+'/depositSections/'+key+'.json',{method:'DELETE'}).then(function(){loadDepSectionsList();});
-  };
-
-  document.getElementById('dep-sec-save').addEventListener('click',function(){
+  function saveDepSection() {
     var title=(document.getElementById('dep-sec-title').value||'').trim();
     var icon=(document.getElementById('dep-sec-icon').value||'').trim()||'💰';
     var desc=(document.getElementById('dep-sec-desc').value||'').trim();
@@ -2261,28 +2306,10 @@
     var proofLabel=(document.getElementById('dep-sec-proof-label').value||'').trim()||'Transaction ID / Proof';
     var errEl=document.getElementById('dep-sec-err'); errEl.style.display='none';
     if(!title){errEl.textContent='Title is required.';errEl.style.display='block';return;}
-    // Collect options (fresh values from inputs)
-    var opts=[]; var optDivs=document.getElementById('dep-sec-options').querySelectorAll('input');
-    for(var i=0;i<depSecOptions.length;i++){
-      opts.push({
-        label:optDivs[i*3]?optDivs[i*3].value:'',
-        sub:optDivs[i*3+1]?optDivs[i*3+1].value:'',
-        address:optDivs[i*3+2]?optDivs[i*3+2].value:''
-      });
-    }
-    var links=[]; var lnkDivs=document.getElementById('dep-sec-links').querySelectorAll('input');
-    for(var i=0;i<depSecLinks.length;i++){
-      links.push({
-        label:lnkDivs[i*4]?lnkDivs[i*4].value:'',
-        url:lnkDivs[i*4+1]?lnkDivs[i*4+1].value:'',
-        icon:lnkDivs[i*4+2]?lnkDivs[i*4+2].value:'🔗',
-        color:lnkDivs[i*4+3]?lnkDivs[i*4+3].value:'var(--accent)'
-      });
-    }
     var data={title:title,icon:icon,description:desc,qrImageUrl:qr,proofLabel:proofLabel,
-              options:opts.filter(function(o){return o.label;}),
-              links:links.filter(function(l){return l.label&&l.url;}),
-              active:true,createdAt:new Date().toISOString()};
+      options:depSecOptions.filter(function(o){return o.label;}),
+      links:depSecLinks.filter(function(l){return l.label&&l.url;}),
+      active:true,createdAt:new Date().toISOString()};
     var btn=document.getElementById('dep-sec-save'); btn.textContent='Saving...'; btn.disabled=true;
     fbPush('/depositSections',data).then(function(){
       btn.textContent='Add Section'; btn.disabled=false;
@@ -2290,147 +2317,146 @@
       depSecOptions=[]; depSecLinks=[]; renderDepOptions(); renderDepLinks();
       loadDepSectionsList();
     }).catch(function(e){errEl.textContent='Error: '+e.message;errEl.style.display='block';btn.textContent='Add Section';btn.disabled=false;});
-  });
+  }
+
+  function loadDepSectionsList() {
+    var wrap=document.getElementById('dep-sections-list');
+    wrap.innerHTML='<div style="text-align:center;padding:1rem;color:#4a6ab0;">Loading...</div>';
+    fbGet('/depositSections').then(function(data){
+      if(!data||!Object.keys(data).length){wrap.innerHTML='<div style="text-align:center;padding:1rem;color:#4a6ab0;">No deposit sections yet.</div>';return;}
+      wrap.innerHTML='';
+      Object.entries(data).forEach(function(e){
+        var key=e[0],sec=e[1],isActive=sec.active!==false;
+        var row=document.createElement('div');
+        row.style.cssText='background:#060d1a;border:1px solid #1a3a7c;border-radius:10px;padding:12px;margin-bottom:8px;';
+        var hdr=document.createElement('div'); hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;';
+        var ttl=document.createElement('div'); ttl.style.cssText='font-size:14px;font-weight:700;color:#fff;'; ttl.textContent=(sec.icon||'💰')+' '+(sec.title||'');
+        var badge=document.createElement('span'); badge.style.cssText='background:'+(isActive?'rgba(74,222,128,0.1)':'rgba(231,76,60,0.1)')+';color:'+(isActive?'#4ade80':'#e74c3c')+';border:1px solid '+(isActive?'rgba(74,222,128,0.3)':'rgba(231,76,60,0.3)')+';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;'; badge.textContent=isActive?'ACTIVE':'HIDDEN';
+        hdr.appendChild(ttl); hdr.appendChild(badge); row.appendChild(hdr);
+        if(sec.description){var d=document.createElement('div');d.style.cssText='font-size:12px;color:#4a6ab0;margin-bottom:6px;';d.textContent=sec.description;row.appendChild(d);}
+        if(sec.qrImageUrl){var q=document.createElement('div');q.style.cssText='font-size:11px;color:#4a6ab0;margin-bottom:6px;';q.innerHTML='QR: <a href="'+sec.qrImageUrl+'" target="_blank" style="color:#7eb3ff;">View</a>';row.appendChild(q);}
+        if(sec.options&&sec.options.length){var o=document.createElement('div');o.style.cssText='font-size:11px;color:#4a6ab0;margin-bottom:6px;';o.textContent=sec.options.length+' payment option(s)';row.appendChild(o);}
+        var btns=document.createElement('div'); btns.style.cssText='display:flex;gap:6px;';
+        var bt=document.createElement('button'); bt.style.cssText='flex:1;padding:6px;background:rgba(246,201,0,0.1);color:#f6c90e;border:1px solid rgba(246,201,0,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;'; bt.textContent=isActive?'Hide':'Show';
+        bt.addEventListener('click',function(){fbUpdate('/depositSections/'+key,{active:!isActive}).then(function(){loadDepSectionsList();});});
+        var bd=document.createElement('button'); bd.style.cssText='flex:1;padding:6px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;'; bd.textContent='Delete';
+        bd.addEventListener('click',function(){if(!confirm('Delete this deposit section?'))return;fetch(FB+'/depositSections/'+key+'.json',{method:'DELETE'}).then(function(){loadDepSectionsList();});});
+        btns.appendChild(bt); btns.appendChild(bd); row.appendChild(btns); wrap.appendChild(row);
+      });
+    });
+  }
 
   // ── WITHDRAWAL SECTIONS ──
-  var wdSecFields = [];
+  var wdSecFields=[], wdSaveListenerAdded=false;
 
   function openWdSections() {
     document.getElementById('modal-wd-sections').classList.add('open');
-    loadWdSectionsList();
-    loadWdRequests();
+    loadWdSectionsList(); loadWdRequests();
+    if(!wdSaveListenerAdded){
+      wdSaveListenerAdded=true;
+      document.getElementById('wd-sec-save').addEventListener('click', saveWdSection);
+    }
   }
 
-  window.addWdField = function() {
-    wdSecFields.push({label:'',placeholder:''});
-    renderWdFields();
-  };
+  window.addWdField=function(){wdSecFields.push({label:'',placeholder:''});renderWdFields();};
 
-  function renderWdFields() {
-    var wrap = document.getElementById('wd-sec-fields');
-    wrap.innerHTML = '';
-    wdSecFields.forEach(function(f,i) {
-      var row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;';
-      row.innerHTML =
-        '<input placeholder="Field name (e.g. Account Number)" value="'+escHtml(f.label||'')+'" style="padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;" onchange="wdSecFields['+i+'].label=this.value"/>'+
-        '<input placeholder="Placeholder text" value="'+escHtml(f.placeholder||'')+'" style="padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;" onchange="wdSecFields['+i+'].placeholder=this.value"/>'+
-        '<button onclick="wdSecFields.splice('+i+',1);renderWdFields();" style="padding:6px 8px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;cursor:pointer;font-size:12px;">×</button>';
-      wrap.appendChild(row);
+  function renderWdFields(){
+    var wrap=document.getElementById('wd-sec-fields'); wrap.innerHTML='';
+    wdSecFields.forEach(function(f,i){
+      var row=document.createElement('div'); row.style.cssText='display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;';
+      [['Field name (e.g. Account No)','label'],['Placeholder text','placeholder']].forEach(function(pair){
+        var inp=document.createElement('input'); inp.placeholder=pair[0]; inp.value=f[pair[1]]||'';
+        inp.style.cssText='padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;';
+        inp.addEventListener('input',function(){wdSecFields[i][pair[1]]=this.value;});
+        row.appendChild(inp);
+      });
+      var del=document.createElement('button'); del.textContent='×'; del.style.cssText='padding:6px 8px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;cursor:pointer;font-size:12px;';
+      del.addEventListener('click',function(){wdSecFields.splice(i,1);renderWdFields();}); row.appendChild(del); wrap.appendChild(row);
     });
   }
 
-  function loadWdSectionsList() {
-    var wrap = document.getElementById('wd-sections-list');
-    wrap.innerHTML = '<div style="text-align:center;padding:1rem;color:#4a6ab0;">Loading...</div>';
-    fbGet('/withdrawalSections').then(function(data){
-      if(!data||!Object.keys(data).length){wrap.innerHTML='<div style="text-align:center;padding:1rem;color:#4a6ab0;">No withdrawal options yet.</div>';return;}
-      wrap.innerHTML='';
-      Object.entries(data).forEach(function(e){
-        var key=e[0], sec=e[1];
-        var row=document.createElement('div');
-        row.style.cssText='background:#060d1a;border:1px solid #1a3a7c;border-radius:10px;padding:12px;margin-bottom:8px;';
-        var ttl=document.createElement('div');
-        ttl.style.cssText='font-size:14px;font-weight:700;color:#fff;margin-bottom:6px;';
-        ttl.textContent=(sec.icon||'💸')+' '+(sec.title||'');
-        row.appendChild(ttl);
-        if(sec.description){var d=document.createElement('div');d.style.cssText='font-size:12px;color:#4a6ab0;margin-bottom:6px;';d.textContent=sec.description;row.appendChild(d);}
-        if(sec.fields&&sec.fields.length){var f=document.createElement('div');f.style.cssText='font-size:11px;color:#4a6ab0;margin-bottom:8px;';f.textContent='Fields: '+sec.fields.map(function(x){return x.label;}).join(', ');row.appendChild(f);}
-        var btnDel=document.createElement('button');
-        btnDel.style.cssText='width:100%;padding:6px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;';
-        btnDel.textContent='Delete';
-        btnDel.addEventListener('click',function(){deleteWdSec(key);});
-        row.appendChild(btnDel);
-        wrap.appendChild(row);
-      });
-    });
-  }
-
-  function loadWdRequests() {
-    var wrap = document.getElementById('wd-requests-list');
-    wrap.innerHTML='<div style="text-align:center;padding:0.5rem;color:#4a6ab0;font-size:12px;">Loading...</div>';
-    fbGet('/withdrawalRequests').then(function(data){
-      if(!data||!Object.keys(data).length){wrap.innerHTML='<div style="text-align:center;padding:0.5rem;color:#4a6ab0;font-size:12px;">No withdrawal requests.</div>';return;}
-      var entries=Object.entries(data).filter(function(e){return e[1].status==='pending';});
-      if(!entries.length){wrap.innerHTML='<div style="text-align:center;padding:0.5rem;color:#4ade80;font-size:12px;">No pending requests.</div>';return;}
-      wrap.innerHTML='';
-      entries.forEach(function(e){
-        var key=e[0], req=e[1];
-        var row=document.createElement('div');
-        row.style.cssText='background:#060d1a;border:1px solid #2255b8;border-radius:8px;padding:10px;margin-bottom:6px;';
-        var info=document.createElement('div');
-        info.style.cssText='margin-bottom:8px;';
-        var name=document.createElement('div');
-        name.style.cssText='font-size:13px;font-weight:700;color:#fff;';
-        name.textContent=(req.playerName||'Unknown')+' — Rs.'+Number(req.amount||0).toLocaleString('en-NP');
-        info.appendChild(name);
-        var sub=document.createElement('div');
-        sub.style.cssText='font-size:11px;color:#4a6ab0;';
-        sub.textContent=(req.section||'')+' · '+new Date(req.time).toLocaleString();
-        info.appendChild(sub);
-        if(req.fields){Object.entries(req.fields).forEach(function(f){
-          var fd=document.createElement('div');fd.style.cssText='font-size:11px;color:#4a6ab0;';
-          fd.innerHTML=f[0]+': <strong style="color:#e0e8ff;">'+f[1]+'</strong>';
-          info.appendChild(fd);
-        });}
-        row.appendChild(info);
-        var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;';
-        var btnApp=document.createElement('button');
-        btnApp.style.cssText='flex:1;padding:6px;background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;';
-        btnApp.textContent='Approve';
-        btnApp.addEventListener('click',function(){approveWdReq(key,req.playerKey,req.amount);});
-        var btnRej=document.createElement('button');
-        btnRej.style.cssText='flex:1;padding:6px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;';
-        btnRej.textContent='Reject';
-        btnRej.addEventListener('click',function(){rejectWdReq(key,req.playerKey);});
-        btns.appendChild(btnApp); btns.appendChild(btnRej); row.appendChild(btns);
-        wrap.appendChild(row);
-      });
-    });
-  }
-
-  window.approveWdReq=function(key,playerKey,amount){
-    if(!confirm('Approve withdrawal of Rs.'+Number(amount).toLocaleString('en-NP')+'?'))return;
-    fbUpdate('/withdrawalRequests/'+key,{status:'approved',settledAt:new Date().toISOString()}).then(function(){
-      return fbGet('/players/'+playerKey);
-    }).then(function(player){
-      if(!player)return;
-      var newBal=Math.max(0,(Number(player.balance)||0)-amount);
-      return fbUpdate('/players/'+playerKey,{balance:newBal}).then(function(){
-        return fbPush('/notifications/'+playerKey,{msg:'Withdrawal of Rs.'+Number(amount).toLocaleString('en-NP')+' approved and processed.',type:'withdrawal',time:new Date().toISOString(),read:false});
-      });
-    }).then(function(){alert('Approved!');loadWdRequests();}).catch(function(e){alert('Error: '+e.message);});
-  };
-  window.rejectWdReq=function(key,playerKey){
-    if(!confirm('Reject this withdrawal?'))return;
-    fbUpdate('/withdrawalRequests/'+key,{status:'rejected',settledAt:new Date().toISOString()}).then(function(){
-      return fbPush('/notifications/'+playerKey,{msg:'Your withdrawal request was rejected. Contact support for details.',type:'rejected',time:new Date().toISOString(),read:false});
-    }).then(function(){alert('Rejected.');loadWdRequests();}).catch(function(e){alert('Error: '+e.message);});
-  };
-  window.deleteWdSec=function(key){
-    if(!confirm('Delete this withdrawal option?'))return;
-    fetch(FB+'/withdrawalSections/'+key+'.json',{method:'DELETE'}).then(function(){loadWdSectionsList();});
-  };
-
-  document.getElementById('wd-sec-save').addEventListener('click',function(){
+  function saveWdSection(){
     var title=(document.getElementById('wd-sec-title').value||'').trim();
     var icon=(document.getElementById('wd-sec-icon').value||'').trim()||'💸';
     var desc=(document.getElementById('wd-sec-desc').value||'').trim();
     var errEl=document.getElementById('wd-sec-err'); errEl.style.display='none';
-    if(!title){errEl.textContent='Title is required.';errEl.style.display='block';return;}
-    var fieldInputs=document.getElementById('wd-sec-fields').querySelectorAll('input');
-    var fields=[];
-    for(var i=0;i<wdSecFields.length;i++){
-      fields.push({label:fieldInputs[i*2]?fieldInputs[i*2].value:'',placeholder:fieldInputs[i*2+1]?fieldInputs[i*2+1].value:''});
-    }
-    var data={title:title,icon:icon,description:desc,fields:fields.filter(function(f){return f.label;}),active:true,createdAt:new Date().toISOString()};
+    if(!title){errEl.textContent='Title required.';errEl.style.display='block';return;}
+    var fields=wdSecFields.filter(function(f){return f.label;});
+    var data={title:title,icon:icon,description:desc,fields:fields,active:true,createdAt:new Date().toISOString()};
     var btn=document.getElementById('wd-sec-save'); btn.textContent='Saving...'; btn.disabled=true;
     fbPush('/withdrawalSections',data).then(function(){
       btn.textContent='Add Option'; btn.disabled=false;
       ['wd-sec-title','wd-sec-icon','wd-sec-desc'].forEach(function(id){document.getElementById(id).value='';});
       wdSecFields=[]; renderWdFields(); loadWdSectionsList();
     }).catch(function(e){errEl.textContent='Error: '+e.message;errEl.style.display='block';btn.textContent='Add Option';btn.disabled=false;});
-  });
+  }
+
+  function loadWdSectionsList(){
+    var wrap=document.getElementById('wd-sections-list');
+    wrap.innerHTML='<div style="text-align:center;padding:1rem;color:#4a6ab0;">Loading...</div>';
+    fbGet('/withdrawalSections').then(function(data){
+      if(!data||!Object.keys(data).length){wrap.innerHTML='<div style="text-align:center;padding:1rem;color:#4a6ab0;">No withdrawal options yet.</div>';return;}
+      wrap.innerHTML='';
+      Object.entries(data).forEach(function(e){
+        var key=e[0],sec=e[1];
+        var row=document.createElement('div'); row.style.cssText='background:#060d1a;border:1px solid #1a3a7c;border-radius:10px;padding:12px;margin-bottom:8px;';
+        var ttl=document.createElement('div'); ttl.style.cssText='font-size:14px;font-weight:700;color:#fff;margin-bottom:6px;'; ttl.textContent=(sec.icon||'💸')+' '+(sec.title||'');
+        row.appendChild(ttl);
+        if(sec.description){var d=document.createElement('div');d.style.cssText='font-size:12px;color:#4a6ab0;margin-bottom:6px;';d.textContent=sec.description;row.appendChild(d);}
+        if(sec.fields&&sec.fields.length){var fl=document.createElement('div');fl.style.cssText='font-size:11px;color:#4a6ab0;margin-bottom:8px;';fl.textContent='Fields: '+sec.fields.map(function(x){return x.label;}).join(', ');row.appendChild(fl);}
+        var bd=document.createElement('button'); bd.style.cssText='width:100%;padding:6px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;'; bd.textContent='Delete';
+        bd.addEventListener('click',function(){if(!confirm('Delete?'))return;fetch(FB+'/withdrawalSections/'+key+'.json',{method:'DELETE'}).then(function(){loadWdSectionsList();});});
+        row.appendChild(bd); wrap.appendChild(row);
+      });
+    });
+  }
+
+  function loadWdRequests(){
+    var wrap=document.getElementById('wd-requests-list');
+    wrap.innerHTML='<div style="font-size:12px;color:#4a6ab0;padding:0.5rem;text-align:center;">Loading...</div>';
+    fbGet('/withdrawalRequests').then(function(data){
+      if(!data){wrap.innerHTML='<div style="font-size:12px;color:#4a6ab0;padding:0.5rem;text-align:center;">No requests.</div>';return;}
+      var entries=Object.entries(data).filter(function(e){return e[1].status==='pending';});
+      if(!entries.length){wrap.innerHTML='<div style="font-size:12px;color:#4ade80;padding:0.5rem;text-align:center;">No pending requests.</div>';return;}
+      wrap.innerHTML='';
+      entries.forEach(function(e){
+        var key=e[0],req=e[1];
+        var row=document.createElement('div'); row.style.cssText='background:#060d1a;border:1px solid #2255b8;border-radius:8px;padding:10px;margin-bottom:6px;';
+        var nm=document.createElement('div'); nm.style.cssText='font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;';
+        nm.textContent=(req.playerName||'Unknown')+' — Rs.'+Number(req.amount||0).toLocaleString('en-NP');
+        row.appendChild(nm);
+        var sb=document.createElement('div'); sb.style.cssText='font-size:11px;color:#4a6ab0;margin-bottom:6px;';
+        sb.textContent=(req.section||'')+' · '+new Date(req.time).toLocaleString(); row.appendChild(sb);
+        if(req.fields){Object.entries(req.fields).forEach(function(f){
+          var fd=document.createElement('div'); fd.style.cssText='font-size:11px;color:#4a6ab0;margin-bottom:2px;';
+          fd.textContent=f[0]+': '+f[1]; row.appendChild(fd);
+        });}
+        var btns=document.createElement('div'); btns.style.cssText='display:flex;gap:6px;margin-top:8px;';
+        var ba=document.createElement('button'); ba.style.cssText='flex:1;padding:6px;background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;'; ba.textContent='Approve';
+        ba.addEventListener('click',function(){
+          if(!confirm('Approve Rs.'+Number(req.amount||0).toLocaleString('en-NP')+' withdrawal?'))return;
+          fbUpdate('/withdrawalRequests/'+key,{status:'approved',settledAt:new Date().toISOString()}).then(function(){
+            return fbGet('/players/'+req.playerKey);
+          }).then(function(player){
+            if(!player)return;
+            var nb=Math.max(0,(Number(player.balance)||0)-req.amount);
+            return fbUpdate('/players/'+req.playerKey,{balance:nb}).then(function(){
+              return fbPush('/notifications/'+req.playerKey,{msg:'Withdrawal of Rs.'+Number(req.amount).toLocaleString('en-NP')+' approved and processed.',type:'withdrawal',time:new Date().toISOString(),read:false});
+            });
+          }).then(function(){alert('Approved!');loadWdRequests();}).catch(function(e){alert('Error: '+e.message);});
+        });
+        var br=document.createElement('button'); br.style.cssText='flex:1;padding:6px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;'; br.textContent='Reject';
+        br.addEventListener('click',function(){
+          if(!confirm('Reject this withdrawal?'))return;
+          fbUpdate('/withdrawalRequests/'+key,{status:'rejected'}).then(function(){
+            return fbPush('/notifications/'+req.playerKey,{msg:'Your withdrawal request was rejected. Contact support.',type:'rejected',time:new Date().toISOString(),read:false});
+          }).then(function(){alert('Rejected.');loadWdRequests();});
+        });
+        btns.appendChild(ba); btns.appendChild(br); row.appendChild(btns); wrap.appendChild(row);
+      });
+    });
+  }
+
 
   // Wire buttons
   document.getElementById('dep-sections-btn').addEventListener('click', openDepSections);

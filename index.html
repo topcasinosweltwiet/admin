@@ -2366,7 +2366,7 @@
     var w=document.getElementById('dep-sec-options');if(!w)return;w.innerHTML='';
     _depOptions.forEach(function(opt,i){
       var r=document.createElement('div');r.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;';
-      [['Label','label'],['Network','sub'],['Address','address']].forEach(function(p){
+      [['Label (e.g. USDT TRC20)','label'],['Network (e.g. TRC20)','sub'],['Wallet Address','address']].forEach(function(p){
         var inp=document.createElement('input');inp.value=opt[p[1]]||'';inp.placeholder=p[0];
         inp.style.cssText='padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;';
         inp.oninput=(function(key){return function(){opt[key]=this.value;};})(p[1]);
@@ -2730,6 +2730,7 @@
           <label style="font-size:11px;color:#4a6ab0;text-transform:uppercase;letter-spacing:0.5px;">Options (addresses/accounts)</label>
           <button onclick="addDepOption()" style="padding:3px 10px;background:rgba(126,179,255,0.15);color:#7eb3ff;border:1px solid rgba(126,179,255,0.3);border-radius:6px;font-size:11px;cursor:pointer;">+ Add</button>
         </div>
+        <div style="font-size:10px;color:#4a6ab0;margin-bottom:4px;">Each row: Label = what player sees, Network = blockchain network, Wallet Address = your deposit address</div>
         <div id="dep-sec-options"></div>
       </div>
       <!-- Link buttons -->

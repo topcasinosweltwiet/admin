@@ -2827,135 +2827,234 @@
     var wrap=document.getElementById('aff-list');
     if(!wrap)return;
     wrap.innerHTML='<div style="text-align:center;padding:2rem;color:#4a6ab0;">Loading...</div>';
-    Promise.all([fbGet('/affiliates'),fbGet('/players'),fbGet('/playerCryptoDeposits')]).then(function(res){
-      var affs=res[0]||{}, players=res[1]||{}, deps=res[2]||{};
+    Promise.all([
+      fbGet('/affiliates'),
+      fbGet('/players'),
+      fbGet('/playerCryptoDeposits'),
+      fbGet('/gameTxns')
+    ]).then(function(res){
+      var affs=res[0]||{}, players=res[1]||{}, deps=res[2]||{}, txns=res[3]||{};
       if(!Object.keys(affs).length){wrap.innerHTML='<div style="text-align:center;padding:2rem;color:#4a6ab0;">No partners yet.</div>';return;}
       wrap.innerHTML='';
       Object.entries(affs).forEach(function(e){
         var key=e[0], aff=e[1];
         var code=(aff.promoCode||'').toUpperCase();
-        // Players using this code
-        var myPlayers=Object.entries(players).filter(function(p){return (p[1].promoCode||'').toUpperCase()===code;});
+        var myPlayers=Object.entries(players).filter(function(p){return(p[1].promoCode||'').toUpperCase()===code;});
         var myPlayerKeys=myPlayers.map(function(p){return p[0];});
-        // Total deposits
+        // Total deposits from these players
         var totalDep=0;
-        Object.values(deps).forEach(function(d){if(myPlayerKeys.indexOf(d.playerKey)>=0&&d.status==='approved')totalDep+=(d.creditedAmount||0);});
-        // Commission = 25% of player losses (from balance decreases)
-        var pendingBal=aff.pendingBalance||Math.floor(totalDep*((aff.commissionRate||0)/100));
+        Object.values(deps).forEach(function(d){
+          if(myPlayerKeys.indexOf(d.playerKey)>=0&&d.status==='approved')totalDep+=(d.creditedAmount||0);
+        });
+        // Total player wins and losses from game transactions
+        var totalWon=0, totalLost=0;
+        Object.values(txns).forEach(function(t){
+          if(myPlayerKeys.indexOf(t.playerKey)>=0){
+            if(t.type==='win')totalWon+=(t.amount||0);
+            else if(t.type==='loss')totalLost+=(t.amount||0);
+          }
+        });
+        // Commission = 25% of losses - 30% of wins
+        var commEarned=Math.floor(totalLost*0.25) - Math.floor(totalWon*0.30);
+        commEarned=Math.max(0,commEarned);
+        var pendingBal=aff.pendingBalance!==undefined?aff.pendingBalance:commEarned;
+        var isPending=aff.disabled;
 
         var card=document.createElement('div');
         card.style.cssText='background:#060d1a;border:1px solid #1a3a7c;border-radius:14px;padding:16px;margin-bottom:12px;';
         card.innerHTML=
+          // Header
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'+
-            '<div><div style="font-size:16px;font-weight:800;color:#e0e8ff;">🤝 '+aff.username+'</div>'+
-            '<div style="font-size:11px;color:#4a6ab0;margin-top:2px;">'+new Date(aff.createdAt||Date.now()).toLocaleDateString()+(aff.email?' · '+aff.email:'')+'</div></div>'+
-            '<div style="display:flex;gap:6px;">'+
-              '<span style="background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+code+'</span>'+
-              (aff.disabled?'<span style="background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">DISABLED</span>':'<span style="background:rgba(74,222,128,0.08);color:#4ade80;border:1px solid rgba(74,222,128,0.2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">ACTIVE</span>')+
+            '<div>'+
+              '<div style="font-size:16px;font-weight:800;color:#e0e8ff;">🤝 '+aff.username+'</div>'+
+              '<div style="font-size:11px;color:#4a6ab0;margin-top:2px;">Code: <strong style="color:#4ade80;">'+code+'</strong>'+(aff.email?' · '+aff.email:'')+(isPending?' · <span style="color:#e74c3c;">DISABLED</span>':'')+'</div>'+
+            '</div>'+
+            '<div style="text-align:right;">'+
+              '<div style="font-size:18px;font-weight:900;color:#f6c90e;">Rs. '+pendingBal.toLocaleString('en-NP')+'</div>'+
+              '<div style="font-size:10px;color:#4a6ab0;">Pending Payout</div>'+
             '</div>'+
           '</div>'+
-          '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">'+
-            '<div style="background:#0a1525;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#3b82f6;">'+myPlayers.length+'</div><div style="font-size:10px;color:#4a6ab0;margin-top:2px;">Players</div></div>'+
-            '<div style="background:#0a1525;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:13px;font-weight:800;color:#4ade80;">Rs.'+Number(totalDep).toLocaleString('en-NP')+'</div><div style="font-size:10px;color:#4a6ab0;margin-top:2px;">Total Dep.</div></div>'+
-            '<div style="background:#0a1525;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:13px;font-weight:800;color:#f6c90e;">'+(aff.commissionRate||0)+'%</div><div style="font-size:10px;color:#4a6ab0;margin-top:2px;">Commission</div></div>'+
-            '<div style="background:#0a1525;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:13px;font-weight:800;color:#f6c90e;">Rs.'+Number(pendingBal).toLocaleString('en-NP')+'</div><div style="font-size:10px;color:#4a6ab0;margin-top:2px;">Pending Pay</div></div>'+
-          '</div>'+
-          '<div style="background:#050a18;border:1px solid rgba(246,201,0,0.15);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#4a6ab0;">'+
-            '25% of player losses added | 30% of player wins deducted | Min withdrawal: Rs.5,000 | Wallet: <span style="color:#e0e8ff;">'+(aff.walletInfo||'Not set')+'</span>'+
-          '</div>'+
-          '<div id="edit-aff-'+key+'" style="display:none;background:#050a18;border:1px solid #1a3a7c;border-radius:8px;padding:12px;margin-bottom:10px;">'+
-            '<div style="font-size:12px;font-weight:700;color:#7eb3ff;margin-bottom:10px;">Edit Partner Details</div>'+
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'+
-              '<div><label style="font-size:10px;color:#4a6ab0;display:block;margin-bottom:3px;">Password</label><input type="text" id="ep-pass-'+key+'" value="'+aff.password+'" style="width:100%;padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;"/></div>'+
-              '<div><label style="font-size:10px;color:#4a6ab0;display:block;margin-bottom:3px;">Promo Code</label><input type="text" id="ep-code-'+key+'" value="'+code+'" style="width:100%;padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;text-transform:uppercase;"/></div>'+
+          // Stats grid
+          '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;">'+
+            '<div style="background:#0a1525;border-radius:8px;padding:8px;text-align:center;">'+
+              '<div style="font-size:14px;font-weight:800;color:#3b82f6;">'+myPlayers.length+'</div>'+
+              '<div style="font-size:9px;color:#4a6ab0;margin-top:2px;">Players</div>'+
             '</div>'+
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'+
-              '<div><label style="font-size:10px;color:#4a6ab0;display:block;margin-bottom:3px;">Commission %</label><input type="number" id="ep-comm-'+key+'" value="'+(aff.commissionRate||0)+'" style="width:100%;padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;"/></div>'+
-              '<div><label style="font-size:10px;color:#4a6ab0;display:block;margin-bottom:3px;">Wallet Info</label><input type="text" id="ep-wallet-'+key+'" value="'+(aff.walletInfo||'')+'" style="width:100%;padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;"/></div>'+
+            '<div style="background:#0a1525;border-radius:8px;padding:8px;text-align:center;">'+
+              '<div style="font-size:14px;font-weight:800;color:#4ade80;">Rs. '+totalDep.toLocaleString('en-NP')+'</div>'+
+              '<div style="font-size:9px;color:#4a6ab0;margin-top:2px;">Total Dep</div>'+
             '</div>'+
-            '<div style="margin-bottom:8px;"><label style="font-size:10px;color:#4a6ab0;display:block;margin-bottom:3px;">Email / Gmail</label><input type="email" id="ep-email-'+key+'" value="'+(aff.email||'')+'" placeholder="partner@gmail.com" style="width:100%;padding:7px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:12px;outline:none;"/></div>'+
-            '<button class="aff-btn-save" data-key="'+key+'" style="padding:7px 16px;background:#4ade80;color:#000;border:none;border-radius:6px;font-size:12px;font-weight:800;cursor:pointer;">Save Changes</button>'+
-          '</div>'+
-          '<div style="background:#050a18;border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:10px;margin-bottom:10px;">'+
-            '<div style="font-size:11px;color:#4a6ab0;margin-bottom:6px;">Saturday Payout — Min Rs.5,000</div>'+
-            '<div style="display:flex;gap:8px;align-items:center;">'+
-              '<input type="number" id="pay-amt-'+key+'" placeholder="Amount to pay (Rs.)" style="flex:1;padding:7px;border-radius:6px;border:1px solid rgba(74,222,128,0.3);background:#0a1525;color:#f6c90e;font-size:13px;font-weight:700;outline:none;"/>'+
-              '<button class="aff-btn-pay" data-key="'+key+'" data-name="'+aff.username+'" style="padding:7px 14px;background:rgba(74,222,128,0.15);color:#4ade80;border:1.5px solid rgba(74,222,128,0.4);border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Confirm & Pay</button>'+
+            '<div style="background:#0a1525;border-radius:8px;padding:8px;text-align:center;">'+
+              '<div style="font-size:14px;font-weight:800;color:#e74c3c;">Rs. '+totalLost.toLocaleString('en-NP')+'</div>'+
+              '<div style="font-size:9px;color:#4a6ab0;margin-top:2px;">Players Lost</div>'+
+            '</div>'+
+            '<div style="background:#0a1525;border-radius:8px;padding:8px;text-align:center;">'+
+              '<div style="font-size:14px;font-weight:800;color:#4ade80;">Rs. '+totalWon.toLocaleString('en-NP')+'</div>'+
+              '<div style="font-size:9px;color:#4a6ab0;margin-top:2px;">Players Won</div>'+
+            '</div>'+
+            '<div style="background:#0a1525;border-radius:8px;padding:8px;text-align:center;">'+
+              '<div style="font-size:14px;font-weight:800;color:#f6c90e;">'+Math.max(0,aff.commissionRate||0)+'%</div>'+
+              '<div style="font-size:9px;color:#4a6ab0;margin-top:2px;">Comm Rate</div>'+
             '</div>'+
           '</div>'+
-          '<div style="display:flex;gap:6px;">'+
-            '<button class="aff-btn-edit" data-key="'+key+'" style="flex:1;padding:7px;background:rgba(126,179,255,0.1);color:#7eb3ff;border:1px solid rgba(126,179,255,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Edit</button>'+
-            '<button class="aff-btn-tog" data-key="'+key+'" data-dis="'+(!!aff.disabled)+'" style="flex:1;padding:7px;background:rgba(246,201,0,0.1);color:#f6c90e;border:1px solid rgba(246,201,0,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">'+(aff.disabled?'Enable':'Disable')+'</button>'+
-            '<button class="aff-btn-del" data-key="'+key+'" data-name="'+aff.username+'" style="flex:1;padding:7px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Delete</button>'+
-            '<button class="aff-btn-players" data-key="'+key+'" data-code="'+code+'" style="flex:1;padding:7px;background:rgba(59,130,246,0.1);color:#3b82f6;border:1px solid rgba(59,130,246,0.3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Players</button>'+
+          // Commission formula info
+          '<div style="font-size:10px;color:#4a6ab0;background:#0a1525;border-radius:6px;padding:6px 10px;margin-bottom:10px;">'+
+            '💡 Formula: 25% of player losses ('+Math.floor(totalLost*0.25).toLocaleString('en-NP')+') − 30% of player wins ('+Math.floor(totalWon*0.30).toLocaleString('en-NP')+') = Rs. '+commEarned.toLocaleString('en-NP')+
+          '</div>'+
+          // Wallet info
+          '<div style="font-size:12px;color:#4a6ab0;margin-bottom:10px;">'+
+            '💳 Wallet: <span style="color:#e0e8ff;">'+(aff.walletInfo||'Not set')+'</span>'+
+          '</div>'+
+          // Action buttons
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+
+            '<button class="aff-btn-edit" data-key="'+key+'" style="flex:1;min-width:80px;padding:7px;background:rgba(59,130,246,0.1);color:#3b82f6;border:1px solid rgba(59,130,246,0.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">✏️ Edit</button>'+
+            '<button class="aff-btn-pay" data-key="'+key+'" data-name="'+aff.username+'" data-bal="'+pendingBal+'" style="flex:1;min-width:80px;padding:7px;background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">✓ Confirm Pay</button>'+
+            '<button class="aff-btn-tog" data-key="'+key+'" data-dis="'+(!!(aff.disabled))+'" style="flex:1;min-width:80px;padding:7px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">'+(aff.disabled?'Enable':'Disable')+'</button>'+
+            '<button class="aff-btn-del" data-key="'+key+'" data-name="'+aff.username+'" style="flex:1;min-width:80px;padding:7px;background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.4);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">🗑️ Delete</button>'+
           '</div>';
         wrap.appendChild(card);
       });
       // Wire buttons
-      wrap.querySelectorAll('.aff-btn-edit').forEach(function(b){b.onclick=function(){var d=document.getElementById('edit-aff-'+b.dataset.key);if(d)d.style.display=d.style.display==='none'?'block':'none';};});
-      wrap.querySelectorAll('.aff-btn-save').forEach(function(b){b.onclick=function(){saveAffEdit(b.dataset.key);};});
-      wrap.querySelectorAll('.aff-btn-pay').forEach(function(b){b.onclick=function(){confirmAffPayout(b.dataset.key,b.dataset.name);};});
+      wrap.querySelectorAll('.aff-btn-edit').forEach(function(b){b.onclick=function(){openEditAffiliate(b.dataset.key);};});
+      wrap.querySelectorAll('.aff-btn-pay').forEach(function(b){b.onclick=function(){confirmAffPayout(b.dataset.key,b.dataset.name,parseFloat(b.dataset.bal||0));};});
       wrap.querySelectorAll('.aff-btn-tog').forEach(function(b){b.onclick=function(){toggleAffDisable(b.dataset.key,b.dataset.dis==='true');};});
       wrap.querySelectorAll('.aff-btn-del').forEach(function(b){b.onclick=function(){deleteAffiliate(b.dataset.key,b.dataset.name);};});
-      wrap.querySelectorAll('.aff-btn-players').forEach(function(b){b.onclick=function(){showAffPlayers(b.dataset.code);};});
     }).catch(function(e){wrap.innerHTML='<div style="color:#e74c3c;padding:1rem;">Error: '+e.message+'</div>';});
   }
 
-  window.saveAffEdit=function(key){
-    var pass=(document.getElementById('ep-pass-'+key).value||'').trim();
-    var code=(document.getElementById('ep-code-'+key).value||'').trim().toUpperCase();
-    var comm=parseFloat(document.getElementById('ep-comm-'+key).value)||0;
-    var wallet=(document.getElementById('ep-wallet-'+key).value||'').trim();
-    var email=(document.getElementById('ep-email-'+key).value||'').trim();
-    if(!pass||!code){alert('Password and promo code required.');return;}
-    fbUpdate('/affiliates/'+key,{password:pass,promoCode:code,commissionRate:comm,walletInfo:wallet,email:email})
-      .then(function(){alert('Partner updated!');loadAffiliates();}).catch(function(e){alert('Error: '+e.message);});
+  window.createAffiliate = function() {
+    var user=(document.getElementById('aff-new-user').value||'').trim();
+    var pass=(document.getElementById('aff-new-pass').value||'').trim();
+    var code=(document.getElementById('aff-new-code').value||'').trim().toUpperCase();
+    var comm=parseFloat(document.getElementById('aff-new-comm').value)||0;
+    var wallet=(document.getElementById('aff-new-wallet').value||'').trim();
+    var err=document.getElementById('aff-create-err');
+    var ok=document.getElementById('aff-create-ok');
+    err.style.display='none'; ok.style.display='none';
+    if(!user||!pass||!code){err.textContent='Username, password and promo code are required.';err.style.display='block';return;}
+    var btn=document.getElementById('aff-create-btn');
+    if(btn){btn.textContent='Creating...';btn.disabled=true;}
+    fbGet('/affiliates').then(function(existing){
+      if(existing){
+        var vals=Object.values(existing);
+        var dupUser=vals.find(function(a){return(a.username||'').toLowerCase()===user.toLowerCase();});
+        var dupCode=vals.find(function(a){return(a.promoCode||'').toUpperCase()===code;});
+        if(dupUser){if(btn){btn.textContent='Create Partner Account';btn.disabled=false;}err.textContent='Username already exists.';err.style.display='block';return Promise.resolve(null);}
+        if(dupCode){if(btn){btn.textContent='Create Partner Account';btn.disabled=false;}err.textContent='Promo code already in use.';err.style.display='block';return Promise.resolve(null);}
+      }
+      return fetch(FB+'/affiliates.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        username:user,password:pass,promoCode:code,commissionRate:comm,
+        walletInfo:wallet,disabled:false,pendingBalance:0,
+        createdAt:new Date().toISOString(),autoPayoutDay:'saturday'
+      })});
+    }).then(function(res){
+      if(!res)return;
+      if(btn){btn.textContent='Create Partner Account';btn.disabled=false;}
+      ['aff-new-user','aff-new-pass','aff-new-code','aff-new-comm','aff-new-wallet'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+      ok.textContent='✓ Partner account created!';ok.style.display='block';
+      loadAffiliates();
+    }).catch(function(e){
+      if(btn){btn.textContent='Create Partner Account';btn.disabled=false;}
+      err.textContent='Error: '+e.message;err.style.display='block';
+    });
   };
 
-  window.confirmAffPayout=function(key,name){
-    var amtEl=document.getElementById('pay-amt-'+key);
-    var amt=parseFloat(amtEl?amtEl.value:0);
-    if(!amt||isNaN(amt)||amt<1){alert('Enter payout amount.');return;}
-    if(amt<5000){alert('Minimum payout is Rs. 5,000.');return;}
-    if(!confirm('Pay Rs.'+amt.toLocaleString('en-NP')+' to '+name+'?'))return;
-    fetch(FB+'/affiliateWithdrawals/'+key+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      amount:amt,status:'paid',paidAt:new Date().toISOString(),time:new Date().toISOString()
-    })}).then(function(){alert('Payout recorded for '+name);if(amtEl)amtEl.value='';loadAffiliates();}).catch(function(e){alert('Error: '+e.message);});
-  };
+  function openEditAffiliate(key) {
+    fbGet('/affiliates/'+key).then(function(aff){
+      if(!aff){alert('Not found');return;}
+      // Build edit modal
+      var ov=document.createElement('div');
+      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+      var box=document.createElement('div');
+      box.style.cssText='background:#0d1f3c;border:1px solid #1a3a7c;border-radius:16px;padding:1.5rem;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;';
+      box.innerHTML=
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'+
+          '<div style="font-size:16px;font-weight:800;color:#e0e8ff;">✏️ Edit Partner: '+aff.username+'</div>'+
+          '<button id="edit-aff-close" style="padding:4px 10px;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);border-radius:6px;cursor:pointer;">✕</button>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'+
+          '<div><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Username</label>'+
+          '<input id="edit-aff-user" value="'+(aff.username||'')+'" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>'+
+          '<div><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Password</label>'+
+          '<input id="edit-aff-pass" value="'+(aff.password||'')+'" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'+
+          '<div><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Promo Code</label>'+
+          '<input id="edit-aff-code" value="'+(aff.promoCode||'')+'" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;text-transform:uppercase;"/></div>'+
+          '<div><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Commission Rate (%)</label>'+
+          '<input type="number" id="edit-aff-comm" value="'+(aff.commissionRate||0)+'" min="0" max="100" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>'+
+        '</div>'+
+        '<div style="margin-bottom:10px;"><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Email (optional)</label>'+
+          '<input id="edit-aff-email" value="'+(aff.email||'')+'" placeholder="partner@gmail.com" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>'+
+        '<div style="margin-bottom:10px;"><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Wallet / Payment Info</label>'+
+          '<input id="edit-aff-wallet" value="'+(aff.walletInfo||'')+'" placeholder="eSewa: 98XXXXXXXX" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>'+
+        '<div style="margin-bottom:14px;"><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Pending Balance (Rs.)</label>'+
+          '<input type="number" id="edit-aff-bal" value="'+(aff.pendingBalance||0)+'" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(246,201,0,0.4);background:#0a1525;color:#f6c90e;font-size:14px;font-weight:700;outline:none;"/></div>'+
+        '<div id="edit-aff-err" style="display:none;color:#e74c3c;font-size:12px;margin-bottom:8px;"></div>'+
+        '<div style="display:flex;gap:8px;">'+
+          '<button id="edit-aff-save" style="flex:1;padding:10px;background:#4ade80;color:#000;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;">Save Changes</button>'+
+          '<button id="edit-aff-cancel" style="padding:10px 16px;background:rgba(255,255,255,0.05);color:#4a6ab0;border:1px solid #1a3a7c;border-radius:8px;cursor:pointer;">Cancel</button>'+
+        '</div>';
+      ov.appendChild(box);
+      document.body.appendChild(ov);
+      document.getElementById('edit-aff-close').onclick=function(){ov.remove();};
+      document.getElementById('edit-aff-cancel').onclick=function(){ov.remove();};
+      ov.onclick=function(ev){if(ev.target===ov)ov.remove();};
+      document.getElementById('edit-aff-save').onclick=function(){
+        var btn=document.getElementById('edit-aff-save');
+        btn.textContent='Saving...';btn.disabled=true;
+        var data={
+          username:(document.getElementById('edit-aff-user').value||'').trim(),
+          password:(document.getElementById('edit-aff-pass').value||'').trim(),
+          promoCode:(document.getElementById('edit-aff-code').value||'').trim().toUpperCase(),
+          commissionRate:parseFloat(document.getElementById('edit-aff-comm').value)||0,
+          email:(document.getElementById('edit-aff-email').value||'').trim(),
+          walletInfo:(document.getElementById('edit-aff-wallet').value||'').trim(),
+          pendingBalance:parseFloat(document.getElementById('edit-aff-bal').value)||0
+        };
+        if(!data.username||!data.password||!data.promoCode){
+          document.getElementById('edit-aff-err').textContent='Username, password and code required.';
+          document.getElementById('edit-aff-err').style.display='block';
+          btn.textContent='Save Changes';btn.disabled=false;return;
+        }
+        fetch(FB+'/affiliates/'+key+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+          .then(function(){ov.remove();loadAffiliates();alert('✓ Partner updated!');})
+          .catch(function(e){document.getElementById('edit-aff-err').textContent='Error: '+e.message;document.getElementById('edit-aff-err').style.display='block';btn.textContent='Save Changes';btn.disabled=false;});
+      };
+    });
+  }
 
-  window.showAffPlayers=function(code){
-    Promise.all([fbGet('/players'),fbGet('/playerCryptoDeposits')]).then(function(res){
-      var players=res[0]||{}, deps=res[1]||{};
-      var myPlayers=Object.entries(players).filter(function(p){return (p[1].promoCode||'').toUpperCase()===code;});
-      if(!myPlayers.length){alert('No players using code: '+code);return;}
-      var lines=['Players using code '+code+':',''];
-      myPlayers.forEach(function(p){
-        var k=p[0],pl=p[1];
-        var pdeps=Object.values(deps).filter(function(d){return d.playerKey===k&&d.status==='approved';});
-        var dep=pdeps.reduce(function(s,d){return s+(d.creditedAmount||0);},0);
-        lines.push(pl.username+' | Balance: Rs.'+Number(pl.balance||0).toLocaleString('en-NP')+' | Deposits: Rs.'+dep.toLocaleString('en-NP'));
-      });
-      var sep=String.fromCharCode(10);alert(lines.join(sep));
-
+  window.confirmAffPayout = function(key, name, pendingBal) {
+    var minPay = 5000; // Rs. 5000 minimum
+    if(pendingBal < minPay){
+      alert('Cannot pay: Pending balance Rs. '+pendingBal.toLocaleString('en-NP')+' is below minimum Rs. '+minPay.toLocaleString('en-NP')+' (≈$30)');
+      return;
+    }
+    if(!confirm('Confirm payment of Rs. '+pendingBal.toLocaleString('en-NP')+' to '+name+'? Make sure you sent payment to their wallet first.'))return;
+    Promise.all([
+      fetch(FB+'/affiliates/'+key+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({pendingBalance:0})}),
+      fetch(FB+'/affiliatePayouts/'+key+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        amount:pendingBal,status:'paid',paidAt:new Date().toISOString(),paidBy:'admin'
+      })})
+    ]).then(function(){
+      alert('✓ Payment of Rs. '+pendingBal.toLocaleString('en-NP')+' confirmed for '+name);
+      loadAffiliates();
     }).catch(function(e){alert('Error: '+e.message);});
   };
 
-  window.toggleAffDisable=function(key,isDisabled){
-    if(!confirm(isDisabled?'Enable this partner?':'Disable this partner?'))return;
-    fbUpdate('/affiliates/'+key,{disabled:!isDisabled}).then(function(){loadAffiliates();}).catch(function(e){alert('Error: '+e.message);});
+  window.toggleAffDisable = function(key, isDisabled) {
+    if(!confirm((isDisabled?'Enable':'Disable')+' this partner?'))return;
+    fetch(FB+'/affiliates/'+key+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({disabled:!isDisabled})})
+      .then(function(){loadAffiliates();}).catch(function(e){alert('Error: '+e.message);});
   };
 
-  window.deleteAffiliate=function(key,name){
-    if(!confirm('DELETE partner "'+name+'"? Cannot be undone.'))return;
-    fetch(FB+'/affiliates/'+key+'.json',{method:'DELETE'}).then(function(){alert('Partner deleted.');loadAffiliates();}).catch(function(e){alert('Error: '+e.message);});
+  window.deleteAffiliate = function(key, name) {
+    if(!confirm('DELETE partner "'+name+'"? This cannot be undone. Players who used their code will keep their accounts.'))return;
+    fetch(FB+'/affiliates/'+key+'.json',{method:'DELETE'})
+      .then(function(){alert('Partner deleted.');loadAffiliates();})
+      .catch(function(e){alert('Error: '+e.message);});
   };
 
-  window.updateAffComm=function(key){
-    var val=parseFloat(document.getElementById('comm-'+key).value)||0;
-    fbUpdate('/affiliates/'+key,{commissionRate:val}).then(function(){loadAffiliates();}).catch(function(e){alert('Error: '+e.message);});
-  };
-
-  window.processAffPayout=function(key,name){window.confirmAffPayout(key,name);};
 
 
   // Wire deposit/withdrawal modal buttons (ONCE)

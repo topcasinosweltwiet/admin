@@ -2729,8 +2729,10 @@
           <input type="text" id="dep-sec-title" placeholder="e.g. USDT TRC20, eSewa, Khalti" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;box-sizing:border-box;"/>
         </div>
         <div>
-          <label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Icon (emoji)</label>
-          <input type="text" id="dep-sec-icon" placeholder="💰 or 🪙 or 💵" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;box-sizing:border-box;"/>
+          <label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Icon — emoji or image URL</label>
+          <input type="text" id="dep-sec-icon" placeholder="💰 or https://i.imgur.com/logo.png" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;box-sizing:border-box;"/>
+          <div style="font-size:10px;color:#4a6ab0;margin-top:3px;">Design logo → upload to imgur.com → paste URL here</div>
+          <div id="dep-icon-preview" style="margin-top:6px;display:none;text-align:center;"></div>
         </div>
       </div>
 
@@ -2817,8 +2819,9 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <div><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Title *</label>
           <input type="text" id="wd-sec-title" placeholder="e.g. eSewa, USDT, Bank" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
-        <div><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Icon (emoji)</label>
-          <input type="text" id="wd-sec-icon" placeholder="💸" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/></div>
+        <div><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Icon — emoji or image URL</label>
+          <input type="text" id="wd-sec-icon" placeholder="💸 or https://i.imgur.com/logo.png" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;"/>
+          <div style="font-size:10px;color:#4a6ab0;margin-top:3px;">Paste image URL for custom logo</div></div>
       </div>
       <div style="margin-bottom:8px;"><label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:4px;">Category</label>
         <select id="wd-sec-category" style="width:100%;padding:8px;border-radius:6px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:13px;outline:none;">

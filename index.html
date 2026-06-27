@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TopCasinos — Admin Panel</title>
+<title>2xWin — Admin Panel</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #060d1a; color: #e0e8ff; min-height: 100vh; }
@@ -128,7 +128,7 @@
   <div class="login-card">
     <div class="login-logo">
       <div class="login-logo-icon">🔐</div>
-      <div class="login-logo-title">TopCasinos</div>
+      <div class="login-logo-title">2x<span style="color:var(--accent2,#f6c90e);">Win</span></div>
       <div class="login-logo-sub">Admin Control Panel</div>
     </div>
     <div class="login-err" id="login-err"></div>
@@ -141,9 +141,10 @@
 <!-- PANEL -->
 <div class="panel" id="panel">
   <div class="topbar">
-    <div class="topbar-brand">🎰 TopCasinos <span class="admin-badge">ADMIN</span></div>
+    <div class="topbar-brand">🎰 2xWin <span class="admin-badge">ADMIN</span></div>
     <div class="topbar-right">
       <div class="balance-display">Admin Balance: <strong>UNLIMITED</strong></div>
+      <button onclick="openChangePass()" style="padding:7px 14px;background:rgba(246,201,0,0.15);color:#f6c90e;border:1px solid rgba(246,201,0,0.4);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px;">🔑 Change Password</button>
       <button class="btn-logout" id="logout-btn">Log out</button>
     </div>
   </div>
@@ -556,6 +557,30 @@
   </div>
 </div>
 
+<!-- CHANGE PASSWORD MODAL -->
+<div class="overlay" id="modal-chpass">
+  <div class="modal" style="max-width:420px;">
+    <button class="mclose" onclick="document.getElementById('modal-chpass').classList.remove('open')">✕</button>
+    <div class="modal-title">🔑 Change Admin Password</div>
+    <div class="modal-sub">Enter current and new password</div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:6px;">Current Password</label>
+      <input type="password" id="cp-current" placeholder="Enter current password" style="width:100%;padding:10px;border-radius:8px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:14px;outline:none;box-sizing:border-box;"/>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:6px;">New Password</label>
+      <input type="password" id="cp-new" placeholder="Enter new password (min 8 chars)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:14px;outline:none;box-sizing:border-box;"/>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;color:#4a6ab0;display:block;margin-bottom:6px;">Confirm New Password</label>
+      <input type="password" id="cp-confirm" placeholder="Confirm new password" style="width:100%;padding:10px;border-radius:8px;border:1px solid #1a3a7c;background:#0a1525;color:#e0e8ff;font-size:14px;outline:none;box-sizing:border-box;"/>
+    </div>
+    <div id="cp-err" style="display:none;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.2);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px;"></div>
+    <div id="cp-ok" style="display:none;background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px;"></div>
+    <button onclick="doChangeAdminPass()" style="width:100%;padding:12px;background:#f6c90e;color:#000;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;">Change Password</button>
+  </div>
+</div>
+
 <!-- PENDING DEPOSITS MODAL -->
 <div class="overlay" id="modal-pending">
   <div class="modal" style="max-width:560px;background:#0d1b33;border:1px solid #1a3a7c;">
@@ -602,8 +627,8 @@
 
 <script>
 (function() {
-  var ADMIN_USER = 'nepalcanmove';
-  var ADMIN_PASS = 'nepalismovingfast@#20';
+  var ADMIN_USER = 'nepalismovingfastwith2xwin';
+  var ADMIN_PASS = 'rspsupporteristheadminof2xwin------@#200//';
   var FB = 'https://topcasinos-b75b3-default-rtdb.asia-southeast1.firebasedatabase.app';
 
   var sessionTopups = 0;
@@ -3055,6 +3080,42 @@
       .catch(function(e){alert('Error: '+e.message);});
   };
 
+
+
+  window.openChangePass = function() {
+    document.getElementById('cp-current').value='';
+    document.getElementById('cp-new').value='';
+    document.getElementById('cp-confirm').value='';
+    document.getElementById('cp-err').style.display='none';
+    document.getElementById('cp-ok').style.display='none';
+    openModal('modal-chpass');
+  };
+
+  window.doChangeAdminPass = function() {
+    var cur=document.getElementById('cp-current').value||'';
+    var nw=document.getElementById('cp-new').value||'';
+    var conf=document.getElementById('cp-confirm').value||'';
+    var err=document.getElementById('cp-err');
+    var ok=document.getElementById('cp-ok');
+    err.style.display='none';ok.style.display='none';
+
+    if(!cur||!nw||!conf){err.textContent='Fill all fields.';err.style.display='block';return;}
+    if(cur!==ADMIN_PASS){err.textContent='Current password is incorrect.';err.style.display='block';return;}
+    if(nw.length<8){err.textContent='New password must be at least 8 characters.';err.style.display='block';return;}
+    if(nw!==conf){err.textContent='New passwords do not match.';err.style.display='block';return;}
+    if(nw===cur){err.textContent='New password must be different from current.';err.style.display='block';return;}
+
+    // Save to Firebase so it persists
+    fetch(FB+'/adminConfig/password.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(nw)})
+      .then(function(){
+        ADMIN_PASS=nw;
+        ok.textContent='✓ Password changed successfully! Remember your new password.';
+        ok.style.display='block';
+        setTimeout(function(){document.getElementById('modal-chpass').classList.remove('open');},2500);
+      }).catch(function(e){
+        err.textContent='Error saving: '+e.message;err.style.display='block';
+      });
+  };
 
 
   // Wire deposit/withdrawal modal buttons (ONCE)

@@ -330,6 +330,19 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans
       <div class="nav-link" onclick="showPage('pg-sports')">
         <span class="ni">⚽</span> Sports Events
       </div>
+      <div class="nav-link" onclick="showPage('pg-dep-sections')">
+        <span class="ni">💳</span> Deposit Sections
+      </div>
+      <div class="nav-link" onclick="showPage('pg-wd-sections')">
+        <span class="ni">🏦</span> Withdrawal Sections
+      </div>
+      <div class="nav-link" onclick="showPage('pg-kyc')">
+        <span class="ni">🪪</span> KYC Requests
+        <span class="nav-badge blue" id="kyc-badge">0</span>
+      </div>
+      <div class="nav-link" onclick="showPage('pg-notifications')">
+        <span class="ni">🔔</span> Notifications
+      </div>
       <div class="nav-link" onclick="showPage('pg-settings')">
         <span class="ni">⚙️</span> Settings
       </div>
@@ -587,6 +600,142 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans
                 <tr class="empty-row"><td colspan="6">Loading events...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DEPOSIT SECTIONS ── -->
+      <div class="page-content" id="pg-dep-sections">
+        <div class="section-card" style="margin-bottom:20px;">
+          <div class="section-header">
+            <div class="section-title">➕ Add Deposit Section</div>
+          </div>
+          <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;">
+            <div class="modal-field"><label class="modal-label">Section Name</label><input class="modal-input" id="ds-name" placeholder="e.g. USDT TRC20"/></div>
+            <div class="modal-field"><label class="modal-label">Icon (emoji or URL)</label><input class="modal-input" id="ds-icon" placeholder="💎 or https://..."/></div>
+            <div class="modal-field"><label class="modal-label">Wallet Address</label><input class="modal-input" id="ds-wallet" placeholder="Wallet address"/></div>
+            <button class="action-btn primary" onclick="addDepSection()" style="height:42px;">+ Add</button>
+          </div>
+          <div class="msg-box msg-err" id="ds-err" style="margin:0 20px 16px;"></div>
+          <div class="msg-box msg-ok" id="ds-ok" style="margin:0 20px 16px;"></div>
+        </div>
+        <div class="section-card">
+          <div class="section-header"><div class="section-title">📋 Current Deposit Sections</div></div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Name</th><th>Icon</th><th>Wallet Address</th><th>Actions</th></tr></thead>
+              <tbody id="dep-sections-body"><tr class="empty-row"><td colspan="4">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── WITHDRAWAL SECTIONS ── -->
+      <div class="page-content" id="pg-wd-sections">
+        <div class="section-card" style="margin-bottom:20px;">
+          <div class="section-header"><div class="section-title">➕ Add Withdrawal Section</div></div>
+          <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;">
+            <div class="modal-field"><label class="modal-label">Method Name</label><input class="modal-input" id="ws-name" placeholder="e.g. eSewa, USDT"/></div>
+            <div class="modal-field"><label class="modal-label">Icon (emoji or URL)</label><input class="modal-input" id="ws-icon" placeholder="💸 or https://..."/></div>
+            <div class="modal-field"><label class="modal-label">Min Amount (Rs.)</label><input class="modal-input" type="number" id="ws-min" value="500"/></div>
+            <button class="action-btn primary" onclick="addWdSection()" style="height:42px;">+ Add</button>
+          </div>
+          <div class="msg-box msg-err" id="ws-err" style="margin:0 20px 16px;"></div>
+          <div class="msg-box msg-ok" id="ws-ok" style="margin:0 20px 16px;"></div>
+        </div>
+        <div class="section-card">
+          <div class="section-header"><div class="section-title">📋 Current Withdrawal Methods</div></div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Method</th><th>Icon</th><th>Min Amount</th><th>Actions</th></tr></thead>
+              <tbody id="wd-sections-body"><tr class="empty-row"><td colspan="4">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── KYC ── -->
+      <div class="page-content" id="pg-kyc">
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">🪪 KYC Verification Requests</div>
+            <span class="badge badge-blue" id="kyc-count-badge">0 pending</span>
+          </div>
+          <div id="kyc-list" style="padding:16px;">
+            <div class="loading">Loading KYC requests...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── NOTIFICATIONS ── -->
+      <div class="page-content" id="pg-notifications">
+        <div style="max-width:600px;">
+          <div class="section-card" style="margin-bottom:20px;">
+            <div class="section-header"><div class="section-title">📢 Send to All Players</div></div>
+            <div style="padding:20px;">
+              <div class="modal-field"><label class="modal-label">Message</label>
+                <textarea class="modal-input" id="notif-all-msg" rows="3" placeholder="Broadcast message to all players..." style="resize:vertical;"></textarea>
+              </div>
+              <div class="modal-field"><label class="modal-label">Type</label>
+                <select class="modal-input" id="notif-type">
+                  <option value="info">ℹ️ Info</option>
+                  <option value="bonus">🎁 Bonus</option>
+                  <option value="promo">🎉 Promo</option>
+                  <option value="warning">⚠️ Warning</option>
+                </select>
+              </div>
+              <button class="action-btn primary" onclick="sendBroadcast()" style="padding:11px 24px;">📢 Send to All</button>
+              <div class="msg-box msg-err" id="notif-err" style="margin-top:10px;"></div>
+              <div class="msg-box msg-ok" id="notif-ok" style="margin-top:10px;"></div>
+            </div>
+          </div>
+          <div class="section-card">
+            <div class="section-header"><div class="section-title">📩 Send to Specific Player</div></div>
+            <div style="padding:20px;">
+              <div class="modal-field"><label class="modal-label">Player Username</label>
+                <input class="modal-input" id="notif-user" placeholder="Enter exact username"/>
+              </div>
+              <div class="modal-field"><label class="modal-label">Message</label>
+                <textarea class="modal-input" id="notif-user-msg" rows="3" placeholder="Personal message..." style="resize:vertical;"></textarea>
+              </div>
+              <button class="action-btn primary" onclick="sendPlayerNotif()" style="padding:11px 24px;">📩 Send</button>
+              <div class="msg-box msg-err" id="notif-user-err" style="margin-top:10px;"></div>
+              <div class="msg-box msg-ok" id="notif-user-ok" style="margin-top:10px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PLAYER DETAIL ── -->
+      <div class="page-content" id="pg-player-detail">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <div class="section-card" style="margin-bottom:16px;">
+              <div class="section-header">
+                <div class="section-title">👤 Player Info</div>
+                <button class="action-btn secondary" onclick="showPage('pg-players')">← Back</button>
+              </div>
+              <div style="padding:20px;" id="player-detail-info">Loading...</div>
+            </div>
+            <div class="section-card">
+              <div class="section-header"><div class="section-title">🪪 KYC Details</div></div>
+              <div style="padding:20px;" id="player-detail-kyc">No KYC submitted</div>
+            </div>
+          </div>
+          <div>
+            <div class="section-card" style="margin-bottom:16px;">
+              <div class="section-header"><div class="section-title">⚙️ Actions</div></div>
+              <div style="padding:20px;display:flex;flex-direction:column;gap:10px;" id="player-detail-actions"></div>
+            </div>
+            <div class="section-card">
+              <div class="section-header"><div class="section-title">🎮 Recent Games</div></div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Game</th><th>Type</th><th>Amount</th><th>Time</th></tr></thead>
+                  <tbody id="player-detail-games"><tr class="empty-row"><td colspan="4">Loading...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -875,7 +1024,10 @@ var pageTitles={
   'pg-dash':'Dashboard','pg-players':'Players','pg-deposits':'Deposits',
   'pg-withdrawals':'Withdrawals','pg-payouts':'Partner Payouts',
   'pg-affiliates':'Affiliates','pg-agents':'Agents',
-  'pg-sports':'Sports Events','pg-settings':'Settings'
+  'pg-sports':'Sports Events','pg-settings':'Settings',
+  'pg-dep-sections':'Deposit Sections','pg-wd-sections':'Withdrawal Sections',
+  'pg-kyc':'KYC Verification','pg-notifications':'Send Notifications',
+  'pg-player-detail':'Player Details'
 };
 function showPage(id){
   document.querySelectorAll('.page-content').forEach(function(p){p.classList.remove('active');});
@@ -888,6 +1040,9 @@ function showPage(id){
   });
   if(id==='pg-payouts')loadPayouts();
   if(id==='pg-withdrawals')renderWithdrawals();
+  if(id==='pg-kyc')loadKYC();
+  if(id==='pg-dep-sections'){renderDepSections();}
+  if(id==='pg-wd-sections'){renderWdSections();}
 }
 
 // ── LOAD ALL ──
@@ -900,7 +1055,9 @@ function loadAll(){
     fbGet('/agents'),
     fbGet('/sportEvents'),
     fbGet('/affiliateWithdrawals'),
-    fbGet('/withdrawalRequests')
+    fbGet('/withdrawalRequests'),
+    fbGet('/depositSections'),
+    fbGet('/withdrawalSections')
   ]).then(function(res){
     _allPlayers=res[0]||{};
     _allDeps=res[1]||{};
@@ -909,6 +1066,8 @@ function loadAll(){
     _allSports=res[4]||{};
     _allPayouts=res[5]||{};
     _allWds=res[6]||{};
+    _allDepSections=res[7]||{};
+    _allWdSections=res[8]||{};
     updateStats();
     renderPlayers();
     renderDeposits();
@@ -917,6 +1076,8 @@ function loadAll(){
     renderSports();
     renderDashPayouts();
     renderWithdrawals();
+    renderDepSections();
+    renderWdSections();
     setText('last-refresh','Updated: '+new Date().toLocaleTimeString());
   }).catch(function(e){setText('last-refresh','Error: '+e.message);});
 }
@@ -1094,12 +1255,20 @@ function renderWithdrawals(){
 }
 
 function approveWd(key){
-  if(!confirm('Mark withdrawal as approved?'))return;
+  if(!confirm('Mark withdrawal as approved/paid?'))return;
   fbUpdate('/withdrawalRequests/'+key,{status:'approved',processedAt:new Date().toISOString()}).then(function(){
     if(_allWds[key])_allWds[key].status='approved';
     renderWithdrawals();
     var w=_allWds[key];
-    if(w&&w.playerKey)fbPush('/notifications/'+w.playerKey,{msg:'Your withdrawal of '+fmt(w.amount||0)+' has been approved!',type:'withdrawal',time:new Date().toISOString(),read:false});
+    if(w&&w.playerKey){
+      var walletAddr=w.wallet||w.walletAddress||'';
+      if(w.fields)walletAddr=w.fields['Wallet Address']||w.fields['Wallet Number']||walletAddr;
+      fbPush('/notifications/'+w.playerKey,{
+        msg:'Your withdrawal of '+fmt(w.amount||0)+' has been processed and sent to '+walletAddr+'.',
+        type:'withdrawal',time:new Date().toISOString(),read:false
+      });
+    }
+    setText('wd-badge',Object.values(_allWds).filter(function(w){return w.status==='pending';}).length);
   });
 }
 function rejectWd(key){
@@ -1396,6 +1565,318 @@ function doChangeAdminPass(){
 }
 
 function renderDashPayouts(){renderPayouts();}
+
+// ── DEPOSIT SECTIONS ──
+var _allDepSections={};
+function loadDepSections(){
+  fbGet('/depositSections').then(function(d){
+    _allDepSections=d||{};renderDepSections();
+  });
+}
+function renderDepSections(){
+  var tbody=$('dep-sections-body');if(!tbody)return;
+  var entries=Object.entries(_allDepSections);
+  if(!entries.length){tbody.innerHTML='<tr class="empty-row"><td colspan="4">No deposit sections yet</td></tr>';return;}
+  tbody.innerHTML=entries.map(function(e){
+    var k=e[0],s=e[1];
+    return '<tr>'+
+      '<td><strong>'+(s.name||'—')+'</strong></td>'+
+      '<td style="font-size:20px;">'+(s.icon||'💰')+'</td>'+
+      '<td style="font-size:12px;color:var(--txt2);max-width:200px;word-break:break-all;">'+(s.wallet||'—')+'</td>'+
+      '<td><button class="action-btn danger" data-k="'+k+'" onclick="delDepSection(this.dataset.k)">Delete</button></td>'+
+    '</tr>';
+  }).join('');
+}
+function addDepSection(){
+  var name=($('ds-name')||{}).value||'';
+  var icon=($('ds-icon')||{}).value||'💰';
+  var wallet=($('ds-wallet')||{}).value||'';
+  if(!name||!wallet){showMsg('ds-err','Fill name and wallet address.');return;}
+  fbPush('/depositSections',{name:name,icon:icon,wallet:wallet,active:true,createdAt:new Date().toISOString()}).then(function(){
+    showMsg('ds-ok','✓ Deposit section added!');
+    $('ds-name').value='';$('ds-icon').value='';$('ds-wallet').value='';
+    loadDepSections();
+  }).catch(function(e){showMsg('ds-err','Error: '+e.message);});
+}
+function delDepSection(key){
+  if(!confirm('Delete this deposit section?'))return;
+  fbDel('/depositSections/'+key).then(function(){loadDepSections();});
+}
+window.addDepSection=addDepSection;
+window.delDepSection=delDepSection;
+
+// ── WITHDRAWAL SECTIONS ──
+var _allWdSections={};
+function loadWdSections(){
+  fbGet('/withdrawalSections').then(function(d){
+    _allWdSections=d||{};renderWdSections();
+  });
+}
+function renderWdSections(){
+  var tbody=$('wd-sections-body');if(!tbody)return;
+  var entries=Object.entries(_allWdSections);
+  if(!entries.length){tbody.innerHTML='<tr class="empty-row"><td colspan="4">No withdrawal methods yet</td></tr>';return;}
+  tbody.innerHTML=entries.map(function(e){
+    var k=e[0],s=e[1];
+    return '<tr>'+
+      '<td><strong>'+(s.name||'—')+'</strong></td>'+
+      '<td style="font-size:20px;">'+(s.icon||'💸')+'</td>'+
+      '<td style="color:var(--accent2);font-weight:700;">'+fmt(s.min||500)+' min</td>'+
+      '<td><button class="action-btn danger" data-k="'+k+'" onclick="delWdSection(this.dataset.k)">Delete</button></td>'+
+    '</tr>';
+  }).join('');
+}
+function addWdSection(){
+  var name=($('ws-name')||{}).value||'';
+  var icon=($('ws-icon')||{}).value||'💸';
+  var min=parseFloat(($('ws-min')||{}).value||500);
+  if(!name){showMsg('ws-err','Enter method name.');return;}
+  fbPush('/withdrawalSections',{name:name,icon:icon,min:min,active:true,createdAt:new Date().toISOString()}).then(function(){
+    showMsg('ws-ok','✓ Withdrawal method added!');
+    $('ws-name').value='';$('ws-icon').value='';
+    loadWdSections();
+  }).catch(function(e){showMsg('ws-err','Error: '+e.message);});
+}
+function delWdSection(key){
+  if(!confirm('Delete this withdrawal method?'))return;
+  fbDel('/withdrawalSections/'+key).then(function(){loadWdSections();});
+}
+window.addWdSection=addWdSection;
+window.delWdSection=delWdSection;
+
+// ── KYC ──
+function loadKYC(){
+  var kycList=$('kyc-list');if(!kycList)return;
+  // Collect all players with KYC submitted
+  var players=Object.entries(_allPlayers);
+  var kycPlayers=[];
+  var promises=[];
+  players.forEach(function(e){
+    var k=e[0],p=e[1];
+    promises.push(
+      fbGet('/players/'+k+'/kyc').then(function(kyc){
+        if(kyc&&kyc.name){kycPlayers.push({key:k,player:p,kyc:kyc});}
+      }).catch(function(){})
+    );
+  });
+  Promise.all(promises).then(function(){
+    var pending=kycPlayers.filter(function(x){return !x.kyc.verified&&!x.kyc.rejected;});
+    var approved=kycPlayers.filter(function(x){return x.kyc.verified;});
+    setText('kyc-badge',pending.length+' pending');
+    setText('kyc-count-badge',pending.length+' pending');
+    setText('kyc-badge',pending.length);
+    if(!kycPlayers.length){kycList.innerHTML='<div class="loading">No KYC submissions yet</div>';return;}
+    var html='';
+    // Pending
+    if(pending.length){
+      html+='<div style="font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">⏳ Pending ('+pending.length+')</div>';
+      pending.forEach(function(x){html+=renderKYCCard(x,false);});
+    }
+    // Approved
+    if(approved.length){
+      html+='<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin:16px 0 12px;">✅ Approved ('+approved.length+')</div>';
+      approved.forEach(function(x){html+=renderKYCCard(x,true);});
+    }
+    kycList.innerHTML=html;
+  });
+}
+function renderKYCCard(x,approved){
+  var k=x.key,p=x.player,kyc=x.kyc;
+  var statusColor=approved?'var(--accent)':kyc.rejected?'var(--red)':'var(--accent2)';
+  var statusText=approved?'✅ Verified':kyc.rejected?'❌ Rejected':'⏳ Pending';
+  return '<div style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'+
+      '<div>'+
+        '<div style="font-size:15px;font-weight:800;color:#fff;">'+( p.username||'?')+'</div>'+
+        '<div style="font-size:11px;color:var(--txt2);margin-top:2px;">UID: '+(p.uid||k)+'</div>'+
+      '</div>'+
+      '<span class="badge" style="background:rgba(255,255,255,0.05);color:'+statusColor+';">'+statusText+'</span>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">'+
+      '<div style="background:var(--bg2);border-radius:8px;padding:10px;">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--txt2);text-transform:uppercase;margin-bottom:4px;">Full Name</div>'+
+        '<div style="font-size:13px;font-weight:700;">'+(kyc.name||'—')+'</div>'+
+      '</div>'+
+      '<div style="background:var(--bg2);border-radius:8px;padding:10px;">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--txt2);text-transform:uppercase;margin-bottom:4px;">DOB</div>'+
+        '<div style="font-size:13px;font-weight:700;">'+(kyc.dob||'—')+'</div>'+
+      '</div>'+
+      '<div style="background:var(--bg2);border-radius:8px;padding:10px;">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--txt2);text-transform:uppercase;margin-bottom:4px;">Phone</div>'+
+        '<div style="font-size:13px;font-weight:700;">'+(kyc.phone||'—')+'</div>'+
+      '</div>'+
+      '<div style="background:var(--bg2);border-radius:8px;padding:10px;">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--txt2);text-transform:uppercase;margin-bottom:4px;">ID Type</div>'+
+        '<div style="font-size:13px;font-weight:700;">'+(kyc.idType||'—')+'</div>'+
+      '</div>'+
+      '<div style="background:var(--bg2);border-radius:8px;padding:10px;">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--txt2);text-transform:uppercase;margin-bottom:4px;">ID Number</div>'+
+        '<div style="font-size:13px;font-weight:700;">'+(kyc.idNumber||'—')+'</div>'+
+      '</div>'+
+      '<div style="background:var(--bg2);border-radius:8px;padding:10px;">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--txt2);text-transform:uppercase;margin-bottom:4px;">Submitted</div>'+
+        '<div style="font-size:11px;color:var(--txt2);">'+(kyc.submittedAt?new Date(kyc.submittedAt).toLocaleDateString():'—')+'</div>'+
+      '</div>'+
+    '</div>'+
+    (!approved&&!kyc.rejected?
+      '<div style="display:flex;gap:8px;">'+
+        '<button class="action-btn danger" data-k="'+k+'" onclick="rejectKYC(this.dataset.k)">✗ Reject</button>'+
+        '<button class="action-btn primary" data-k="'+k+'" onclick="approveKYC(this.dataset.k)">✓ Approve KYC</button>'+
+      '</div>':
+      '<div style="font-size:12px;color:var(--txt2);">Processed on '+(kyc.processedAt?new Date(kyc.processedAt).toLocaleDateString():'—')+'</div>'
+    )+
+  '</div>';
+}
+function approveKYC(key){
+  fbUpdate('/players/'+key+'/kyc',{verified:true,processedAt:new Date().toISOString()}).then(function(){
+    fbPush('/notifications/'+key,{msg:'Your KYC verification has been approved! You now have full access.',type:'kyc',time:new Date().toISOString(),read:false});
+    loadAll();loadKYC();
+  });
+}
+function rejectKYC(key){
+  var reason=prompt('Reason for rejection (shown to player):') || 'KYC documents could not be verified.';
+  fbUpdate('/players/'+key+'/kyc',{rejected:true,rejectReason:reason,processedAt:new Date().toISOString()}).then(function(){
+    fbPush('/notifications/'+key,{msg:'Your KYC was rejected: '+reason,type:'kyc',time:new Date().toISOString(),read:false});
+    loadKYC();
+  });
+}
+window.approveKYC=approveKYC;
+window.rejectKYC=rejectKYC;
+
+// ── NOTIFICATIONS ──
+function sendBroadcast(){
+  var msg=($('notif-all-msg')||{}).value||'';
+  var type=($('notif-type')||{}).value||'info';
+  if(!msg){showMsg('notif-err','Enter a message.');return;}
+  var players=Object.keys(_allPlayers);
+  if(!players.length){showMsg('notif-err','No players found.');return;}
+  var notif={msg:msg,type:type,time:new Date().toISOString(),read:false,fromAdmin:true};
+  var promises=players.map(function(k){return fbPush('/notifications/'+k,notif);});
+  Promise.all(promises).then(function(){
+    showMsg('notif-ok','✓ Sent to '+players.length+' players!');
+    $('notif-all-msg').value='';
+  }).catch(function(e){showMsg('notif-err','Error: '+e.message);});
+}
+function sendPlayerNotif(){
+  var username=($('notif-user')||{}).value||'';
+  var msg=($('notif-user-msg')||{}).value||'';
+  if(!username||!msg){showMsg('notif-user-err','Fill all fields.');return;}
+  var entry=Object.entries(_allPlayers).find(function(e){return (e[1].username||'').toLowerCase()===username.toLowerCase();});
+  if(!entry){showMsg('notif-user-err','Player not found: '+username);return;}
+  fbPush('/notifications/'+entry[0],{msg:msg,type:'info',time:new Date().toISOString(),read:false,fromAdmin:true}).then(function(){
+    showMsg('notif-user-ok','✓ Notification sent to '+username+'!');
+    $('notif-user').value='';$('notif-user-msg').value='';
+  }).catch(function(e){showMsg('notif-user-err','Error: '+e.message);});
+}
+window.sendBroadcast=sendBroadcast;
+window.sendPlayerNotif=sendPlayerNotif;
+
+// ── PLAYER DETAIL VIEW ──
+var _viewPlayerKey=null;
+function viewPlayer(key){
+  _viewPlayerKey=key;
+  var p=_allPlayers[key];if(!p)return;
+  showPage('pg-player-detail');
+  // Info
+  var infoEl=$('player-detail-info');
+  if(infoEl) infoEl.innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+      '<div style="background:var(--bg2);border-radius:10px;padding:12px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Username</div><div style="font-size:16px;font-weight:800;">'+( p.username||'?')+'</div></div>'+
+      '<div style="background:var(--bg2);border-radius:10px;padding:12px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Balance</div><div style="font-size:16px;font-weight:800;color:var(--accent);">'+fmt(p.balance||0)+'</div></div>'+
+      '<div style="background:var(--bg2);border-radius:10px;padding:12px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">UID</div><div style="font-size:12px;word-break:break-all;">'+( p.uid||'—')+'</div></div>'+
+      '<div style="background:var(--bg2);border-radius:10px;padding:12px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Promo Used</div><div style="font-size:14px;font-weight:700;color:var(--purple);">'+( p.promoCode||'None')+'</div></div>'+
+      '<div style="background:var(--bg2);border-radius:10px;padding:12px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Joined</div><div style="font-size:12px;">'+( p.createdAt?new Date(p.createdAt).toLocaleString():'—')+'</div></div>'+
+      '<div style="background:var(--bg2);border-radius:10px;padding:12px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Withdrawal</div><div style="font-size:14px;font-weight:700;color:'+(p.wdBlocked?'var(--red)':'var(--accent)')+';">'+(p.wdBlocked?'🔒 Blocked':'✅ Allowed')+'</div></div>'+
+    '</div>';
+  // Actions
+  var actEl=$('player-detail-actions');
+  if(actEl) actEl.innerHTML=
+    '<button class="action-btn primary" data-k="'+key+'" onclick="openBalModal(this.dataset.k)">💰 Edit Balance</button>'+
+    '<button class="action-btn yellow" data-k="'+key+'" onclick="resetPlayerBal(this.dataset.k)">🔄 Reset Balance to 0</button>'+
+    (p.wdBlocked?
+      '<button class="action-btn primary" data-k="'+key+'" onclick="toggleWdBlock(this.dataset.k,false)">🔓 Unblock Withdrawals</button>':
+      '<button class="action-btn danger" data-k="'+key+'" onclick="toggleWdBlock(this.dataset.k,true)">🔒 Block Withdrawals</button>')+
+    '<button class="action-btn" data-k="'+key+'" onclick="sendPlayerNotifDirect(this.dataset.k)">📩 Send Notification</button>'+
+    '<button class="action-btn danger" data-k="'+key+'" onclick="deletePlayer(this.dataset.k)" style="margin-top:8px;border-color:rgba(239,68,68,0.4);">🗑️ Delete Player Account</button>';
+  // KYC
+  var kycEl=$('player-detail-kyc');
+  fbGet('/players/'+key+'/kyc').then(function(kyc){
+    if(!kyc||!kyc.name){if(kycEl)kycEl.innerHTML='<div style="color:var(--txt2);font-size:13px;">No KYC submitted yet</div>';return;}
+    if(kycEl) kycEl.innerHTML=
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:10px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Full Name</div><div style="font-weight:700;">'+(kyc.name||'—')+'</div></div>'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:10px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">DOB</div><div style="font-weight:700;">'+(kyc.dob||'—')+'</div></div>'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:10px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">ID Type</div><div style="font-weight:700;">'+(kyc.idType||'—')+'</div></div>'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:10px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">ID Number</div><div style="font-weight:700;">'+(kyc.idNumber||'—')+'</div></div>'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:10px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Status</div><div style="font-weight:700;color:'+(kyc.verified?'var(--accent)':kyc.rejected?'var(--red)':'var(--accent2)')+';">'+(kyc.verified?'✅ Verified':kyc.rejected?'❌ Rejected':'⏳ Pending')+'</div></div>'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:10px;"><div style="font-size:9px;color:var(--txt2);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Submitted</div><div style="font-size:11px;">'+(kyc.submittedAt?new Date(kyc.submittedAt).toLocaleDateString():'—')+'</div></div>'+
+      '</div>'+
+      (!kyc.verified&&!kyc.rejected?
+        '<div style="display:flex;gap:8px;margin-top:12px;">'+
+          '<button class="action-btn danger" data-k="'+key+'" onclick="rejectKYC(this.dataset.k)">✗ Reject</button>'+
+          '<button class="action-btn primary" data-k="'+key+'" onclick="approveKYC(this.dataset.k)">✓ Approve</button>'+
+        '</div>':'');
+  });
+  // Recent game transactions
+  fbGet('/gameTxns').then(function(txns){
+    var playerTxns=txns?Object.values(txns).filter(function(t){return t.playerKey===key;}).sort(function(a,b){return new Date(b.time)-new Date(a.time);}).slice(0,20):[];
+    var tbody=$('player-detail-games');
+    if(!tbody)return;
+    if(!playerTxns.length){tbody.innerHTML='<tr class="empty-row"><td colspan="4">No game history</td></tr>';return;}
+    tbody.innerHTML=playerTxns.map(function(t){
+      var isWin=t.type==='win';
+      return '<tr>'+
+        '<td style="font-size:12px;">'+(t.game||'Game')+'</td>'+
+        '<td>'+(isWin?'<span class="badge badge-green">Win</span>':'<span class="badge badge-red">Loss</span>')+'</td>'+
+        '<td style="font-weight:700;color:'+(isWin?'var(--accent)':'var(--red)')+';">'+(isWin?'+':'-')+fmt(t.amount||0)+'</td>'+
+        '<td style="font-size:11px;color:var(--txt2);">'+( t.time?new Date(t.time).toLocaleDateString():'—')+'</td>'+
+      '</tr>';
+    }).join('');
+  }).catch(function(){});
+}
+window.viewPlayer=viewPlayer;
+
+function toggleWdBlock(key,block){
+  var msg=block?'Block withdrawals for this player?':'Unblock withdrawals for this player?';
+  if(!confirm(msg))return;
+  fbUpdate('/players/'+key,{wdBlocked:block}).then(function(){
+    if(_allPlayers[key])_allPlayers[key].wdBlocked=block;
+    viewPlayer(key);renderPlayers();
+    alert(block?'Withdrawals blocked!':'Withdrawals unblocked!');
+  });
+}
+window.toggleWdBlock=toggleWdBlock;
+
+function resetPlayerBal(key){
+  if(!confirm('Reset balance to Rs. 0? This cannot be undone!'))return;
+  fbUpdate('/players/'+key,{balance:0}).then(function(){
+    if(_allPlayers[key])_allPlayers[key].balance=0;
+    viewPlayer(key);renderPlayers();
+    alert('Balance reset to Rs. 0');
+  });
+}
+window.resetPlayerBal=resetPlayerBal;
+
+function deletePlayer(key){
+  var p=_allPlayers[key];
+  if(!confirm('PERMANENTLY delete '+( p?p.username:'this player')+'? This cannot be undone!'))return;
+  if(!confirm('Are you ABSOLUTELY sure? All data will be lost!'))return;
+  fbDel('/players/'+key).then(function(){
+    delete _allPlayers[key];
+    renderPlayers();showPage('pg-players');
+    alert('Player deleted.');
+  }).catch(function(e){alert('Error: '+e.message);});
+}
+window.deletePlayer=deletePlayer;
+
+function sendPlayerNotifDirect(key){
+  var msg=prompt('Message to send to player:');
+  if(!msg)return;
+  fbPush('/notifications/'+key,{msg:msg,type:'info',time:new Date().toISOString(),read:false,fromAdmin:true}).then(function(){
+    alert('Notification sent!');
+  });
+}
+window.sendPlayerNotifDirect=sendPlayerNotifDirect;
 </script>
 </body>
 </html>
